@@ -35,107 +35,311 @@
                     <div class="bg-base-100 rounded-md p-4 h-64 font-mono text-sm overflow-auto border border-base-300">
                         <pre><code id="script-output" class="text-gray-300"># Your generated script will appear here...</code></pre>
                     </div>
-                    <div class="mt-4 flex space-x-4">
-                        <button class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 flex-1"><i class="fas fa-play mr-2"></i>Dry Run</button>
-                        <button class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 flex-1"><i class="fas fa-rocket mr-2"></i>Run</button>
+                    <div class="mt-4 grid grid-cols-3 gap-2">
+                        <button id="dry-run-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-play mr-2"></i>Dry Run</button>
+                        <button id="run-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-rocket mr-2"></i>Run</button>
+                        <button id="sudo-run-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-user-shield mr-2"></i>Run as Sudo</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Saved Assets Card -->
-    <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
-        <div class="p-6 border-b border-base-300">
-            <h2 class="text-lg font-semibold text-white">Saved Assets</h2>
-            <p class="text-sm text-gray-400 mt-1">Manage locally saved scripts and pipelines from your Git repository.</p>
+    <!-- Live Run Output Container -->
+    <div id="run-output-container" class="hidden bg-base-200 border border-base-300 shadow-lg rounded-lg">
+        <div class="p-6 border-b border-base-300 flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-white">Live Execution Output</h2>
+            <button id="clear-run-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
         </div>
-        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Locally Saved Scripts -->
-            <div>
-                <h3 class="text-md font-semibold mb-3 text-gray-300">Local Scripts</h3>
-                <ul class="space-y-2">
-                    <li class="flex items-center justify-between bg-base-100 border border-base-300 p-3 rounded-md hover:bg-base-300 cursor-pointer">
-                        <div class="flex items-center">
-                            <i class="fas fa-scroll text-yellow-400 fa-fw mr-3"></i>
-                            <span class="font-mono text-sm">check_disk_space.sh</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <button class="text-gray-400 hover:text-white"><i class="fas fa-edit"></i></button>
-                            <button class="text-gray-400 hover:text-white"><i class="fab fa-github"></i></button>
-                            <button class="text-gray-400 hover:text-red-500"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-            <!-- GitHub Repo Scripts/Pipelines -->
-            <div>
-                <h3 class="text-md font-semibold mb-3 text-gray-300">GitHub Repo (main)</h3>
-                <ul class="space-y-2">
-                     <li class="flex items-center justify-between bg-base-100 border border-base-300 p-3 rounded-md hover:bg-base-300 cursor-pointer">
-                        <div class="flex items-center">
-                            <i class="fas fa-cogs text-blue-400 fa-fw mr-3"></i>
-                            <span class="font-mono text-sm">deploy_web_app.yml</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                           <button class="text-gray-400 hover:text-white"><i class="fas fa-play-circle"></i></button>
-                        </div>
-                    </li>
-                </ul>
-            </div>
+        <div id="run-output-content" class="p-6 font-mono text-sm">
+            <!-- Live run output will be inserted here -->
         </div>
     </div>
 </div>
 
-<script>
-document.getElementById('generate-btn').addEventListener('click', function() {
-    const btn = this;
-    const prompt = document.getElementById('script-prompt').value;
-    const script_type = document.getElementById('script-type').value;
-    const ai_provider = document.getElementById('ai-provider').value;
-    const output_box = document.getElementById('script-output');
+<!-- Host Selection Modal -->
+<div id="host-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-md border border-base-300">
+        <div class="p-6 border-b border-base-300">
+            <h3 class="text-lg font-semibold text-white">Select Hosts to Run On</h3>
+        </div>
+        <div class="p-6 max-h-64 overflow-y-auto">
+            <div id="host-list" class="space-y-2">
+                <!-- Host checkboxes will be inserted here -->
+            </div>
+        </div>
+        <div class="p-6 bg-base-100 border-t border-base-300 flex justify-end space-x-4">
+            <button id="cancel-run-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
+            <button id="confirm-run-btn" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">Run Script</button>
+        </div>
+    </div>
+</div>
 
-    if (!prompt) {
-        alert('Please enter a description for the script.');
-        return;
+<!-- Dry Run Output Modal -->
+<div id="output-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-4xl border border-base-300 flex flex-col" style="max-height: 90vh;">
+        <div class="p-6 border-b border-base-300 flex justify-between items-center">
+            <h3 id="output-modal-title" class="text-lg font-semibold text-white">Execution Results</h3>
+            <button id="close-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div id="output-modal-content" class="p-6 overflow-y-auto flex-1 font-mono text-sm">
+            <!-- Output will be inserted here -->
+        </div>
+    </div>
+</div>
+
+
+<script>
+try {
+    // --- STATE ---
+    let useSudo = false;
+
+    // --- DOM ELEMENTS ---
+    const hostModal = document.getElementById('host-modal');
+    const outputModal = document.getElementById('output-modal');
+    const runOutputContainer = document.getElementById('run-output-container');
+    const runOutputContent = document.getElementById('run-output-content');
+    const cancelRunBtn = document.getElementById('cancel-run-btn');
+    const closeOutputBtn = document.getElementById('close-output-btn');
+    const clearRunOutputBtn = document.getElementById('clear-run-output-btn');
+    const runBtn = document.getElementById('run-btn');
+    const sudoRunBtn = document.getElementById('sudo-run-btn');
+    const dryRunBtn = document.getElementById('dry-run-btn');
+    const confirmRunBtn = document.getElementById('confirm-run-btn');
+
+    // --- MODAL & CONTAINER HANDLING ---
+    function showModal(modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+    function hideModal(modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
     }
 
-    // Set loading state
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
-    output_box.textContent = 'AI is thinking...';
+    // --- DRY RUN ---
+    function renderCollapsibleDryRun(text) {
+        const contentArea = document.createElement('div');
+        const sections = text.split(/\n\s*HEADING:\s*/);
 
-    fetch("{{ url_for('main.generate_script') }}", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            prompt: prompt,
-            script_type: script_type,
-            ai_provider: ai_provider,
-        }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            output_box.textContent = 'Error: ' + data.error;
-        } else {
-            // Clean up the script output from markdown code blocks
-            let script = data.script.trim();
-            if (script.startsWith('```') && script.endsWith('```')) {
-                script = script.substring(script.indexOf('\n') + 1, script.lastIndexOf('```')).trim();
+        const intro = document.createElement('div');
+        intro.className = 'whitespace-pre-wrap mb-4';
+        intro.textContent = sections[0].trim();
+        contentArea.appendChild(intro);
+
+        sections.slice(1).forEach((section, index) => {
+            const lines = section.split('\n');
+            const title = lines[0].trim();
+            let content = lines.slice(1).join('\n');
+            
+            content = content.replace(/```([\s\S]*?)```/g, (match, code) => {
+                return `<pre class="bg-base-100 p-3 rounded-md my-2 text-gray-300"><code>${code.trim()}</code></pre>`;
+            });
+
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'border-t border-base-300 pt-4 mt-4';
+
+            const button = document.createElement('button');
+            button.className = 'w-full text-left flex justify-between items-center text-white font-semibold';
+            button.innerHTML = `<span>${title}</span><i class="fas fa-chevron-down transform transition-transform"></i>`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'mt-2 text-gray-400 whitespace-pre-wrap';
+            contentDiv.innerHTML = content;
+            
+            if (index > 0) {
+                contentDiv.classList.add('hidden');
+            } else {
+                button.querySelector('i').classList.add('rotate-180');
             }
-            output_box.textContent = script;
+
+            button.addEventListener('click', () => {
+                contentDiv.classList.toggle('hidden');
+                button.querySelector('i').classList.toggle('rotate-180');
+            });
+
+            sectionDiv.appendChild(button);
+            sectionDiv.appendChild(contentDiv);
+            contentArea.appendChild(sectionDiv);
+        });
+        return contentArea;
+    }
+
+    dryRunBtn.addEventListener('click', () => {
+        const script = document.getElementById('script-output').textContent;
+        const ai_provider = document.getElementById('ai-provider').value;
+        if (script.startsWith('# Your generated script')) {
+            alert('Please generate a script first.');
+            return;
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        output_box.textContent = 'An unexpected error occurred. Check the console for details.';
-    })
-    .finally(() => {
-        // Reset button
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-magic mr-2"></i>Generate Script';
+        
+        document.getElementById('output-modal-title').textContent = 'Dry Run Analysis';
+        const content = document.getElementById('output-modal-content');
+        content.innerHTML = '<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing script...</div>';
+        showModal(outputModal);
+
+        fetch("{{ url_for('main.dry_run') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ script: script, ai_provider: ai_provider }),
+        })
+        .then(res => res.json())
+        .then(data => {
+            content.innerHTML = ''; // Clear spinner
+            if (data.error) {
+                content.innerHTML = `<pre class="whitespace-pre-wrap">${data.error}</pre>`;
+            } else {
+                content.appendChild(renderCollapsibleDryRun(data.output));
+            }
+        });
     });
-});
+
+    // --- REAL RUN ---
+    function openHostSelectionModal() {
+        const script = document.getElementById('script-output').textContent;
+        if (script.startsWith('# Your generated script')) {
+            alert('Please generate a script first.');
+            return;
+        }
+        fetch("{{ url_for('main.get_hosts') }}")
+            .then(res => res.json())
+            .then(hosts => {
+                const hostList = document.getElementById('host-list');
+                hostList.innerHTML = '';
+                if (hosts.length === 0) {
+                    hostList.innerHTML = '<p class="text-gray-400">No hosts found. Please add hosts on the Hosts page.</p>';
+                } else {
+                    hosts.forEach(host => {
+                        hostList.innerHTML += `
+                            <label class="flex items-center space-x-3 p-2 rounded-md hover:bg-base-300 cursor-pointer">
+                                <input type="checkbox" value="${host.id}" class="form-checkbox h-5 w-5 bg-base-100 border-base-300 text-accent focus:ring-accent">
+                                <span>${host.name}</span>
+                            </label>
+                        `;
+                    });
+                }
+                showModal(hostModal);
+            });
+    }
+
+    runBtn.addEventListener('click', () => {
+        useSudo = false;
+        openHostSelectionModal();
+    });
+
+    sudoRunBtn.addEventListener('click', () => {
+        useSudo = true;
+        openHostSelectionModal();
+    });
+
+    cancelRunBtn.addEventListener('click', () => hideModal(hostModal));
+    closeOutputBtn.addEventListener('click', () => hideModal(outputModal));
+    clearRunOutputBtn.addEventListener('click', () => {
+        runOutputContent.innerHTML = '';
+        runOutputContainer.classList.add('hidden');
+    });
+
+    confirmRunBtn.addEventListener('click', () => {
+        const selectedHosts = Array.from(document.querySelectorAll('#host-list input:checked')).map(cb => cb.value);
+        if (selectedHosts.length === 0) {
+            alert('Please select at least one host.');
+            return;
+        }
+        const script = document.getElementById('script-output').textContent;
+        hideModal(hostModal);
+
+        runOutputContainer.classList.remove('hidden');
+        runOutputContent.innerHTML = '<div class="p-4"><i class="fas fa-spinner fa-spin mr-2"></i>Running script on hosts...</div>';
+
+        fetch("{{ url_for('main.run_script') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                script: script, 
+                host_ids: selectedHosts,
+                use_sudo: useSudo
+            }),
+        })
+        .then(res => res.json())
+        .then(data => {
+            runOutputContent.innerHTML = '';
+            data.results.forEach(result => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'mb-4 p-4 rounded-md border';
+                const statusClass = result.success ? 'border-green-500 bg-green-900 bg-opacity-20' : 'border-red-500 bg-red-900 bg-opacity-20';
+                resultDiv.classList.add(...statusClass.split(' '));
+                
+                resultDiv.innerHTML = `
+                    <h4 class="font-bold text-white">${result.host_name}</h4>
+                    <div class="mt-2">
+                        <strong class="text-gray-400">Output:</strong>
+                        <pre class="whitespace-pre-wrap text-gray-300">${result.output || '(No output)'}</pre>
+                    </div>
+                    ${result.error ? `
+                    <div class="mt-2">
+                        <strong class="text-red-400">Error:</strong>
+                        <pre class="whitespace-pre-wrap text-red-400">${result.error}</pre>
+                    </div>
+                    ` : ''}
+                `;
+                runOutputContent.appendChild(resultDiv);
+            });
+        });
+    });
+
+    // --- SCRIPT GENERATION ---
+    document.getElementById('generate-btn').addEventListener('click', function() {
+        const btn = this;
+        const prompt = document.getElementById('script-prompt').value;
+        const script_type = document.getElementById('script-type').value;
+        const ai_provider = document.getElementById('ai-provider').value;
+        const output_box = document.getElementById('script-output');
+
+        if (!prompt) {
+            alert('Please enter a description for the script.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+        output_box.textContent = 'AI is thinking...';
+
+        fetch("{{ url_for('main.generate_script') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: prompt,
+                script_type: script_type,
+                ai_provider: ai_provider,
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                output_box.textContent = 'Error: ' + data.error;
+            } else {
+                let script = data.script.trim();
+                if (script.startsWith('```') && script.endsWith('```')) {
+                    script = script.substring(script.indexOf('\n') + 1, script.lastIndexOf('```')).trim();
+                }
+                output_box.textContent = script;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            output_box.textContent = 'An unexpected error occurred. Check the console for details.';
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-magic mr-2"></i>Generate Script';
+        });
+    });
+} catch (e) {
+    console.error("A critical error occurred on the page:", e);
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'position:fixed; bottom:10px; left:10px; padding:1rem; background-color:#ef4444; color:white; z-index:10000; border-radius:8px;';
+    errorDiv.textContent = 'A page script error occurred. Check the console for details. Some features may not work.';
+    document.body.appendChild(errorDiv);
+}
 </script>
 {% endblock %}
