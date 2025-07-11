@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <form method="POST" action="{{ url_for('settings.settings') }}">
+        <!-- AI Providers Card -->
+        <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
+            <button type="button" class="w-full text-left p-6 flex justify-between items-center" data-collapsible>
+                <div>
+                    <h2 class="text-lg font-semibold text-white">AI Providers</h2>
+                    <p class="text-sm text-gray-400 mt-1">API keys for Gemini and ChatGPT.</p>
+                </div>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </button>
+            <div class="collapsible-content">
+                <div class="p-6 border-t border-base-300 space-y-4">
+                    <div>
+                        <label for="gemini_api_key" class="block text-sm font-medium text-gray-400 mb-2">Gemini API Key</label>
+                        <div class="relative">
+                            <input type="password" name="gemini_api_key" id="gemini_api_key" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 text-white pr-10" placeholder="Enter new key to update">
+                            <button type="button" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white toggle-password"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="chatgpt_api_key" class="block text-sm font-medium text-gray-400 mb-2">ChatGPT API Key</label>
+                        <div class="relative">
+                            <input type="password" name="chatgpt_api_key" id="chatgpt_api_key" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 text-white pr-10" placeholder="Enter new key to update">
+                            <button type="button" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white toggle-password"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GitHub Settings Card -->
+        <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
+            <button type="button" class="w-full text-left p-6 flex justify-between items-center" data-collapsible>
+                <div>
+                    <h2 class="text-lg font-semibold text-white">GitHub Integration</h2>
+                    <p class="text-sm text-gray-400 mt-1">API key and repository details for script management.</p>
+                </div>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </button>
+            <div class="collapsible-content">
+                <div class="p-6 border-t border-base-300 space-y-4">
+                    <div>
+                        <label for="github_api_key" class="block text-sm font-medium text-gray-400 mb-2">GitHub API Key</label>
+                        <div class="relative">
+                            <input type="password" name="github_api_key" id="github_api_key" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 text-white pr-10" placeholder="Enter new key to update">
+                            <button type="button" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white toggle-password"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="github_repo" class="block text-sm font-medium text-gray-400 mb-2">GitHub Repository (e.g., user/repo)</label>
+                        <input type="text" name="github_repo" id="github_repo" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 text-white" value="{{ config.get('github_repo', '') }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notifications Card -->
+        <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
+            <button type="button" class="w-full text-left p-6 flex justify-between items-center" data-collapsible>
+                <div>
+                    <h2 class="text-lg font-semibold text-white">Notifications</h2>
+                    <p class="text-sm text-gray-400 mt-1">Configure webhooks for services like Discord and Slack.</p>
+                </div>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </button>
+            <div class="collapsible-content">
+                <div class="p-6 border-t border-base-300 space-y-4">
+                    <div>
+                        <label for="discord_webhook" class="block text-sm font-medium text-gray-400 mb-2">Discord Webhook URL</label>
+                        <div class="flex space-x-2">
+                            <input type="url" name="discord_webhook" id="discord_webhook" class="flex-1 bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 text-white" value="{{ config.get('discord_webhook', '') }}">
+                            <button type="button" id="test-discord-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-all duration-300">Test</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end mt-6">
+            <button type="submit" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-save mr-2"></i>Save Settings</button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Handles collapsible sections
+document.querySelectorAll('[data-collapsible]').forEach(button => {
+    button.addEventListener('click', () => {
+        const content = button.nextElementSibling;
+        const icon = button.querySelector('i');
+        
+        if (content.style.maxHeight) {
+            content.style.maxHeight = null;
+            icon.classList.remove('rotate-180');
+        } else {
+            content.style.maxHeight = content.scrollHeight + "px";
+            icon.classList.add('rotate-180');
+        } 
+    });
+});
+
+// Handles password visibility toggle
+document.querySelectorAll('.toggle-password').forEach(button => {
+    button.addEventListener('click', function() {
+        const input = this.previousElementSibling;
+        const icon = this.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    });
+});
+
+// Handles Discord test button
+document.getElementById('test-discord-btn').addEventListener('click', function() {
+    const btn = this;
+    const webhook_url = document.getElementById('discord_webhook').value;
+
+    if (!webhook_url) {
+        alert('Please enter a Discord Webhook URL to test.');
+        return;
+    }
+
+    const original_text = btn.textContent;
+    btn.textContent = 'Testing...';
+    btn.disabled = true;
+
+    fetch("{{ url_for('settings.test_discord') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webhook_url: webhook_url }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            btn.textContent = 'Success!';
+            btn.classList.add('bg-green-600');
+        } else {
+            btn.textContent = 'Failed!';
+            btn.classList.add('bg-red-600');
+            alert('Test failed: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        btn.textContent = 'Error!';
+        btn.classList.add('bg-red-600');
+    })
+    .finally(() => {
+        setTimeout(() => {
+            btn.textContent = original_text;
+            btn.disabled = false;
+            btn.classList.remove('bg-green-600', 'bg-red-600');
+        }, 3000);
+    });
+});
+</script>
+{% endblock %}

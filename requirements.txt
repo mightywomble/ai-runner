@@ -3,3 +3,6 @@ PyYAML
 Flask-SQLAlchemy
 Flask-Migrate
 paramiko
+google-generativeai
+openai
+requests

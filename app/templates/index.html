@@ -15,17 +15,17 @@
                     <div class="mb-4">
                         <label for="script-type" class="block text-sm font-medium text-gray-400 mb-2">Script Type</label>
                         <select id="script-type" name="script-type" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
-                            <option value="bash_cmd">Bash Command</option>
-                            <option value="bash_script">Bash Script</option>
-                            <option value="ansible">Ansible Playbook</option>
-                            <option value="python">Python Script</option>
+                            <option value="Bash Command">Bash Command</option>
+                            <option value="Bash Script">Bash Script</option>
+                            <option value="Ansible Playbook">Ansible Playbook</option>
+                            <option value="Python Script">Python Script</option>
                         </select>
                     </div>
                     <div class="mb-4">
                         <label for="script-prompt" class="block text-sm font-medium text-gray-400 mb-2">Description</label>
                         <textarea id="script-prompt" name="script-prompt" rows="6" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., 'Check disk space on /var and list the top 10 largest files'"></textarea>
                     </div>
-                     <button class="w-full bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                     <button id="generate-btn" class="w-full bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300">
                         <i class="fas fa-magic mr-2"></i>Generate Script
                     </button>
                 </div>
@@ -86,4 +86,56 @@
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('generate-btn').addEventListener('click', function() {
+    const btn = this;
+    const prompt = document.getElementById('script-prompt').value;
+    const script_type = document.getElementById('script-type').value;
+    const ai_provider = document.getElementById('ai-provider').value;
+    const output_box = document.getElementById('script-output');
+
+    if (!prompt) {
+        alert('Please enter a description for the script.');
+        return;
+    }
+
+    // Set loading state
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+    output_box.textContent = 'AI is thinking...';
+
+    fetch("{{ url_for('main.generate_script') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            prompt: prompt,
+            script_type: script_type,
+            ai_provider: ai_provider,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            output_box.textContent = 'Error: ' + data.error;
+        } else {
+            // Clean up the script output from markdown code blocks
+            let script = data.script.trim();
+            if (script.startsWith('```') && script.endsWith('```')) {
+                script = script.substring(script.indexOf('\n') + 1, script.lastIndexOf('```')).trim();
+            }
+            output_box.textContent = script;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        output_box.textContent = 'An unexpected error occurred. Check the console for details.';
+    })
+    .finally(() => {
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-magic mr-2"></i>Generate Script';
+    });
+});
+</script>
 {% endblock %}
