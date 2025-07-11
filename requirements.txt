@@ -6,3 +6,4 @@ paramiko
 google-generativeai
 openai
 requests
+PyGithub

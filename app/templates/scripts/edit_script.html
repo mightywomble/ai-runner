@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
+        <div class="p-6 border-b border-base-300">
+            <h2 class="text-lg font-semibold text-white">Edit Script: {{ script.name }}</h2>
+        </div>
+        <form method="POST" action="{{ url_for('scripts.edit_script', script_id=script.id) }}" class="p-6">
+            <div class="space-y-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-400 mb-2">Script Name</label>
+                    <input type="text" name="name" id="name" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 text-white" value="{{ script.name }}">
+                </div>
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-400 mb-2">Description</label>
+                    <textarea name="description" id="description" rows="3" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 text-white">{{ script.description or '' }}</textarea>
+                </div>
+                <div>
+                    <label for="content" class="block text-sm font-medium text-gray-400 mb-2">Script Content</label>
+                    <textarea name="content" id="content" rows="15" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 font-mono text-sm text-white">{{ script.content }}</textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-4">
+                <a href="{{ url_for('scripts.scripts_list') }}" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</a>
+                <button type="submit" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md"><i class="fas fa-save mr-2"></i>Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Local Scripts Card -->
+    <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
+        <div class="p-6 border-b border-base-300">
+            <h2 class="text-lg font-semibold text-white">Local Scripts</h2>
+            <p class="text-sm text-gray-400 mt-1">Scripts saved to the local application database.</p>
+        </div>
+        <div class="p-6">
+            <ul class="space-y-2">
+                {% for script in local_scripts %}
+                <li class="flex items-center justify-between bg-base-100 border border-base-300 p-3 rounded-md">
+                    <div class="flex items-center">
+                        <i class="fas fa-scroll text-yellow-400 fa-fw mr-3"></i>
+                        <span class="font-mono text-sm">{{ script.name }}</span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <form method="POST" action="{{ url_for('scripts.push_to_github', script_id=script.id) }}" class="inline">
+                             <button type="submit" class="text-gray-400 hover:text-white" title="Push to GitHub dev branch"><i class="fab fa-github"></i></button>
+                        </form>
+                        <a href="{{ url_for('scripts.edit_script', script_id=script.id) }}" class="text-gray-400 hover:text-white" title="Edit Script"><i class="fas fa-edit"></i></a>
+                        <form method="POST" action="{{ url_for('scripts.delete_script', script_id=script.id) }}" onsubmit="return confirm('Are you sure?');" class="inline">
+                            <button type="submit" class="text-gray-400 hover:text-red-500" title="Delete Script"><i class="fas fa-trash"></i></button>
+                        </form>
+                        <button class="text-gray-400 hover:text-white run-script-btn" data-script-content="{{ script.content }}" title="Run Script"><i class="fas fa-play-circle"></i></button>
+                    </div>
+                </li>
+                {% else %}
+                <li class="text-center text-gray-500 py-4">No local scripts found.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- GitHub Scripts Card -->
+    <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
+        <div class="p-6 border-b border-base-300">
+            <h2 class="text-lg font-semibold text-white">GitHub Scripts (main branch)</h2>
+            <p class="text-sm text-gray-400 mt-1">Scripts from your configured repository.</p>
+        </div>
+        <div class="p-6">
+             <ul class="space-y-2">
+                {% for script in github_scripts %}
+                <li class="flex items-center justify-between bg-base-100 border border-base-300 p-3 rounded-md">
+                    <div class="flex items-center truncate">
+                        <i class="{{ script.icon }} text-blue-400 fa-fw mr-3"></i>
+                        <span class="font-mono text-sm truncate" title="{{ script.path }}">{{ script.path }}</span>
+                    </div>
+                    <div class="flex items-center space-x-3 flex-shrink-0">
+                        <button class="text-gray-400 hover:text-white github-analyze-btn" data-script-path="{{ script.path }}" title="AI Analysis"><i class="fas fa-search-plus"></i></button>
+                        <button class="text-gray-400 hover:text-white run-script-btn" data-script-path="{{ script.path }}" title="Run Script"><i class="fas fa-play-circle"></i></button>
+                    </div>
+                </li>
+                {% else %}
+                <li class="text-center text-gray-500 py-4">No GitHub scripts found or integration not configured.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Execution Output Container -->
+    <div id="run-output-container" class="hidden bg-base-200 border border-base-300 shadow-lg rounded-lg mt-6">
+        <div class="p-6 border-b border-base-300 flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-white">Execution Output</h2>
+            <button id="clear-run-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div id="run-output-content" class="p-6 font-mono text-sm"></div>
+    </div>
+</div>
+
+<!-- Host Selection Modal -->
+<div id="host-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-md border border-base-300">
+        <div class="p-6 border-b border-base-300"><h3 class="text-lg font-semibold text-white">Select Hosts</h3></div>
+        <div id="host-list" class="p-6 max-h-64 overflow-y-auto space-y-2"></div>
+        <div class="p-6 bg-base-100 border-t border-base-300 flex justify-end space-x-4">
+            <button id="cancel-run-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
+            <button id="confirm-run-btn" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">Run Script</button>
+        </div>
+    </div>
+</div>
+
+<!-- AI Analysis Modal -->
+<div id="output-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-4xl border border-base-300 flex flex-col" style="max-height: 90vh;">
+        <div class="p-6 border-b border-base-300 flex justify-between items-center">
+            <h3 id="output-modal-title" class="text-lg font-semibold text-white">AI Analysis</h3>
+            <button id="close-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div id="output-modal-content" class="p-6 overflow-y-auto flex-1 font-mono text-sm"></div>
+    </div>
+</div>
+
+<script>
+try {
+    let currentScriptContent = '';
+    const hostModal = document.getElementById('host-modal');
+    const outputModal = document.getElementById('output-modal');
+    const runOutputContainer = document.getElementById('run-output-container');
+    const runOutputContent = document.getElementById('run-output-content');
+    const aiProviderSelect = document.getElementById('ai-provider');
+
+    function showModal(modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+    function hideModal(modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+    
+    function renderCollapsible(text) {
+        const contentArea = document.createElement('div');
+        const sections = text.split(/\n\s*HEADING:\s*/);
+        const intro = document.createElement('div');
+        intro.className = 'whitespace-pre-wrap mb-4';
+        intro.textContent = sections[0].trim();
+        contentArea.appendChild(intro);
+        sections.slice(1).forEach((section, index) => {
+            const lines = section.split('\n');
+            const title = lines[0].trim();
+            let content = lines.slice(1).join('\n').replace(/```([\s\S]*?)```/g, (match, code) => `<pre class="bg-base-100 p-3 rounded-md my-2 text-gray-300"><code>${code.trim()}</code></pre>`);
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'border-t border-base-300 pt-4 mt-4';
+            const button = document.createElement('button');
+            button.className = 'w-full text-left flex justify-between items-center text-white font-semibold';
+            button.innerHTML = `<span>${title}</span><i class="fas fa-chevron-down transform transition-transform"></i>`;
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'mt-2 text-gray-400 whitespace-pre-wrap';
+            contentDiv.innerHTML = content;
+            if (index > 0) contentDiv.classList.add('hidden');
+            else button.querySelector('i').classList.add('rotate-180');
+            button.addEventListener('click', () => {
+                contentDiv.classList.toggle('hidden');
+                button.querySelector('i').classList.toggle('rotate-180');
+            });
+            sectionDiv.appendChild(button);
+            sectionDiv.appendChild(contentDiv);
+            contentArea.appendChild(sectionDiv);
+        });
+        return contentArea;
+    }
+
+    document.body.addEventListener('click', function(event) {
+        const button = event.target.closest('button');
+        if (!button) return;
+
+        if (button.classList.contains('run-script-btn')) {
+            const scriptContent = button.dataset.scriptContent;
+            const scriptPath = button.dataset.scriptPath;
+            const fetchPromise = scriptContent ? Promise.resolve(scriptContent) : fetch("{{ url_for('scripts.get_github_script_content') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: scriptPath }) }).then(res => res.json()).then(data => { if (data.error) throw new Error(data.error); return data.content; });
+            fetchPromise.then(content => {
+                currentScriptContent = content;
+                return fetch("{{ url_for('main.get_hosts') }}");
+            }).then(res => res.json()).then(hosts => {
+                document.getElementById('host-list').innerHTML = hosts.length > 0 ? hosts.map(h => `<label class="flex items-center space-x-3 p-2 rounded-md hover:bg-base-300 cursor-pointer"><input type="checkbox" value="${h.id}" class="form-checkbox h-5 w-5 bg-base-100 border-base-300 text-accent focus:ring-accent"><span>${h.name}</span></label>`).join('') : '<p class="text-gray-400">No hosts found.</p>';
+                showModal(hostModal);
+            }).catch(err => alert('Error: ' + err.message));
+        }
+
+        if (button.classList.contains('github-analyze-btn')) {
+            const scriptPath = button.dataset.scriptPath;
+            const content = document.getElementById('output-modal-content');
+            document.getElementById('output-modal-title').textContent = `AI Analysis: ${scriptPath}`;
+            content.innerHTML = '<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...</div>';
+            showModal(outputModal);
+            fetch("{{ url_for('scripts.get_github_script_content') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: scriptPath }) }).then(res => res.json()).then(data => {
+                if (data.error) throw new Error(data.error);
+                return fetch("{{ url_for('scripts.analyze_script') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ script: data.content, ai_provider: aiProviderSelect.value }) });
+            }).then(res => res.json()).then(data => {
+                content.innerHTML = '';
+                if (data.error) content.innerHTML = `<pre class="text-red-500">${data.error}</pre>`;
+                else content.appendChild(renderCollapsible(data.output));
+            }).catch(err => content.innerHTML = `<pre class="text-red-500">${err.message}</pre>`);
+        }
+
+        if (button.id === 'cancel-run-btn') hideModal(hostModal);
+        if (button.id === 'close-output-btn') hideModal(outputModal);
+        if (button.id === 'clear-run-output-btn') {
+            runOutputContent.innerHTML = '';
+            runOutputContainer.classList.add('hidden');
+        }
+
+        if (button.id === 'confirm-run-btn') {
+            const selectedHosts = Array.from(document.querySelectorAll('#host-list input:checked')).map(cb => cb.value);
+            if (selectedHosts.length === 0) return alert('Please select at least one host.');
+            hideModal(hostModal);
+            runOutputContainer.classList.remove('hidden');
+            runOutputContent.innerHTML = '<div class="p-4"><i class="fas fa-spinner fa-spin mr-2"></i>Running script...</div>';
+            fetch("{{ url_for('main.run_script') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ script: currentScriptContent, host_ids: selectedHosts, use_sudo: false }) })
+            .then(res => res.json()).then(data => {
+                runOutputContent.innerHTML = '';
+                data.results.forEach(result => {
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'mb-4 p-4 rounded-md border ' + (result.success ? 'border-green-500 bg-green-900 bg-opacity-20' : 'border-red-500 bg-red-900 bg-opacity-20');
+                    resultDiv.innerHTML = `<h4 class="font-bold text-white">${result.host_name}</h4><div class="mt-2"><strong class="text-gray-400">Output:</strong><pre class="whitespace-pre-wrap text-gray-300">${result.output || '(No output)'}</pre></div>${result.error ? `<div class="mt-2"><strong class="text-red-400">Error:</strong><pre class="whitespace-pre-wrap text-red-400">${result.error}</pre></div>` : ''}`;
+                    runOutputContent.appendChild(resultDiv);
+                });
+            });
+        }
+    });
+} catch (e) {
+    console.error("A critical error occurred on the page:", e);
+}
+</script>
+{% endblock %}

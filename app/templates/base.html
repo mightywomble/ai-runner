@@ -32,15 +32,19 @@
                 <span class="ml-3 text-lg font-semibold text-white">AI Ops Runner</span>
             </div>
             <nav class="flex-1 px-4 py-4 space-y-2">
-                <a href="{{ url_for('main.index') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if request.path == url_for('main.index') else '' }}">
+                <a href="{{ url_for('main.index') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if 'index' in request.endpoint else '' }}">
                     <i class="fas fa-home fa-fw mr-3"></i>
                     <span>Home</span>
                 </a>
-                <a href="{{ url_for('pipelines.pipeline_canvas') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if request.path == url_for('pipelines.pipeline_canvas') else '' }}">
+                <a href="{{ url_for('scripts.scripts_list') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if 'scripts' in request.endpoint else '' }}">
+                    <i class="fas fa-scroll fa-fw mr-3"></i>
+                    <span>Scripts</span>
+                </a>
+                <a href="{{ url_for('pipelines.pipeline_canvas') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if 'pipelines' in request.endpoint else '' }}">
                     <i class="fas fa-cogs fa-fw mr-3"></i>
                     <span>Pipelines</span>
                 </a>
-                 <a href="{{ url_for('hosts.hosts') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if request.path == url_for('hosts.hosts') else '' }}">
+                 <a href="{{ url_for('hosts.hosts') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if 'hosts' in request.endpoint else '' }}">
                     <i class="fas fa-server fa-fw mr-3"></i>
                     <span>Hosts</span>
                 </a>
@@ -50,11 +54,11 @@
                 </a>
             </nav>
             <div class="px-4 py-4 border-t border-base-300">
-                 <a href="{{ url_for('settings.settings') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if request.path == url_for('settings.settings') else '' }}">
+                 <a href="{{ url_for('settings.settings') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if 'settings' in request.endpoint else '' }}">
                     <i class="fas fa-cog fa-fw mr-3"></i>
                     <span>Settings</span>
                 </a>
-                 <a href="{{ url_for('users.user_management') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if request.path == url_for('users.user_management') else '' }}">
+                 <a href="{{ url_for('users.user_management') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if 'users' in request.endpoint else '' }}">
                     <i class="fas fa-users-cog fa-fw mr-3"></i>
                     <span>Users</span>
                 </a>

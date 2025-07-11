@@ -75,7 +75,7 @@
     </div>
 </div>
 
-<!-- Dry Run Output Modal -->
+<!-- Output Modal -->
 <div id="output-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-4xl border border-base-300 flex flex-col" style="max-height: 90vh;">
         <div class="p-6 border-b border-base-300 flex justify-between items-center">
@@ -269,6 +269,19 @@ try {
                 const statusClass = result.success ? 'border-green-500 bg-green-900 bg-opacity-20' : 'border-red-500 bg-red-900 bg-opacity-20';
                 resultDiv.classList.add(...statusClass.split(' '));
                 
+                const actionsHtml = `
+                    <div class="mt-4 pt-4 border-t border-base-300 flex items-center space-x-2">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md text-sm analyze-btn" data-output="${result.output}" data-error="${result.error}">
+                            <i class="fas fa-search-plus mr-2"></i>AI Analysis
+                        </button>
+                        ${result.success ? `
+                        <button class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-1 px-3 rounded-md text-sm save-script-btn">
+                            <i class="fas fa-save mr-2"></i>Save Script
+                        </button>
+                        ` : ''}
+                    </div>
+                `;
+
                 resultDiv.innerHTML = `
                     <h4 class="font-bold text-white">${result.host_name}</h4>
                     <div class="mt-2">
@@ -281,10 +294,65 @@ try {
                         <pre class="whitespace-pre-wrap text-red-400">${result.error}</pre>
                     </div>
                     ` : ''}
+                    ${actionsHtml}
                 `;
                 runOutputContent.appendChild(resultDiv);
             });
         });
+    });
+    
+    // --- DELEGATED EVENT LISTENERS FOR DYNAMIC BUTTONS ---
+    runOutputContent.addEventListener('click', function(event) {
+        const target = event.target.closest('button');
+        if (!target) return;
+
+        const script = document.getElementById('script-output').textContent;
+        const ai_provider = document.getElementById('ai-provider').value;
+
+        if (target.classList.contains('analyze-btn')) {
+            const output = target.dataset.output;
+            const error = target.dataset.error;
+
+            document.getElementById('output-modal-title').textContent = 'Execution Analysis';
+            const content = document.getElementById('output-modal-content');
+            content.innerHTML = '<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing output...</div>';
+            showModal(outputModal);
+
+            fetch("{{ url_for('main.analyze_output') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ script, output, error, ai_provider }),
+            })
+            .then(res => res.json())
+            .then(data => {
+                content.innerHTML = '';
+                if (data.error) {
+                    content.innerHTML = `<pre class="whitespace-pre-wrap">${data.error}</pre>`;
+                } else {
+                    content.appendChild(renderCollapsibleDryRun(data.output));
+                }
+            });
+        }
+
+        if (target.classList.contains('save-script-btn')) {
+            const scriptName = prompt("Enter a name for this script:", "new-script.sh");
+            if (scriptName) {
+                const scriptType = document.getElementById('script-type').value;
+                fetch("{{ url_for('main.save_script') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ script_content: script, script_name: scriptName, script_type: scriptType }),
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                    } else {
+                        alert('Error saving script: ' + data.error);
+                    }
+                });
+            }
+        }
     });
 
     // --- SCRIPT GENERATION ---
