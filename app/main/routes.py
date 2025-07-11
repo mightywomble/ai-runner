@@ -19,7 +19,7 @@ def generate_script():
     if not prompt or not script_type or not ai_provider:
         return jsonify({'error': 'Missing required data.'}), 400
 
-    app_config = Config.get_app_config()
+    app_config = Config.get_app_config() or {}
     full_prompt = f"Generate a {script_type} script that does the following: {prompt}. The script should be complete, correct, and ready to run. Only output the code itself, with no explanation or markdown formatting."
 
     try:
@@ -29,7 +29,8 @@ def generate_script():
                 return jsonify({'error': 'Gemini API key is not configured in settings.'}), 500
             
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-pro')
+            # Corrected model name to a valid one like 'gemini-1.5-flash'
+            model = genai.GenerativeModel('gemini-2.5-flash')
             response = model.generate_content(full_prompt)
             script = response.text
 
@@ -38,8 +39,9 @@ def generate_script():
             if not api_key:
                 return jsonify({'error': 'ChatGPT API key is not configured in settings.'}), 500
             
-            openai.api_key = api_key
-            response = openai.ChatCompletion.create(
+            # Note: The 'openai' library has been updated. This uses the v1+ syntax.
+            client = openai.OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant that only provides code."},
