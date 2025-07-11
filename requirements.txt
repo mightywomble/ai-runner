@@ -1,0 +1,5 @@
+Flask
+PyYAML
+Flask-SQLAlchemy
+Flask-Migrate
+paramiko

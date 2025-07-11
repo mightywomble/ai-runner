@@ -1,0 +1,15 @@
+/* Custom scrollbar for a more modern look consistent with the dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0d1117; /* base-100 */
+}
+::-webkit-scrollbar-thumb {
+  background: #21262d; /* base-300 */
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #30363d; /* A slightly lighter gray */
+}
