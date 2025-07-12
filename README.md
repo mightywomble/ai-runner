@@ -1,81 +1,173 @@
-# AI Ops Runner
 
-    ## Summary
+# AI-Runner: Your Intelligent DevOps Assistant
 
-    AI Ops Runner is a web-based application designed to streamline server management and operations tasks. It provides a modern, clean interface to generate and execute scripts (Bash, Python, Ansible) on remote hosts, analyze the output using AI, and manage operational pipelines. The goal is to create a powerful, extensible platform that simplifies complex infrastructure tasks.
+## Summary of App
 
-    ---
+AI-Runner is a web-based application designed to streamline DevOps operations by integrating AI-powered script generation, execution, and analysis with host management and pipeline automation. It provides a centralized platform for managing infrastructure tasks, automating workflows, and leveraging artificial intelligence to enhance efficiency and reduce manual effort.
 
-    ## Features Implemented
+## Meaning of App Name
 
-    * **Modular Flask Application:** Built using a blueprint architecture to keep features organized and easy to extend.
-    * **Modern UI:** A dark-themed, sidebar-based layout inspired by modern cloud dashboards.
-    * **Host Management:**
-        * Add, edit, and delete hosts via the web UI.
-        * Store detailed host information, including name, IP address, OS type, location, and description.
-        * Dynamic forms that show Linux distribution options only when "Linux" is selected.
-        * Live SSH connection testing for both new and existing hosts.
-    * **Database Integration:** Uses Flask-SQLAlchemy and Flask-Migrate to manage a SQLite database for persistent storage.
+The name "AI-Runner" signifies the core functionality of the application: it's a platform that **runs** various scripts and automated tasks, heavily leveraging **Artificial Intelligence** (AI) to assist in generating, analyzing, and executing these operations. It implies an intelligent agent that executes commands and workflows.
 
-    ---
+## Purpose of App
 
-    ## How to Install and Run
+The primary purpose of AI-Runner is to empower DevOps engineers, system administrators, and developers with tools to:
 
-    Follow these steps to get the application running on your local machine.
+-   **Generate scripts quickly:** Use natural language prompts to create Bash, Python, or Ansible scripts.
+    
+-   **Automate tasks:** Define and execute complex multi-step pipelines across multiple hosts.
+    
+-   **Manage infrastructure:** Centralize the management of remote hosts, including SSH credentials and operating system details.
+    
+-   **Analyze operations:** Get AI-driven insights into script dry runs and live execution outputs.
+    
+-   **Improve efficiency:** Reduce repetitive manual tasks and enhance the speed and reliability of deployments and system maintenance.
+    
+-   **Collaborate:** (Future potential) Provide a shared platform for teams to manage and execute operations.
+    
 
-    ### 1. Clone the Repository
+## Feature List
 
-    First, clone this repository to your local machine.
+-   **AI Script Generation:**
+    
+    -   Generate Bash commands, Bash scripts, Python scripts, and Ansible playbooks from natural language descriptions.
+        
+    -   Supports multiple AI providers (Gemini, ChatGPT).
+        
+-   **Script Management:**
+    
+    -   Save generated scripts locally within the application.
+        
+    -   Edit and delete saved scripts.
+        
+    -   Push local scripts to a GitHub repository (e.g., `dev` branch) organized by script type.
+        
+    -   Pull scripts from GitHub repositories.
+        
+-   **Host Management:**
+    
+    -   Add, edit, and delete remote hosts with details like IP address, SSH username, OS type, and group.
+        
+    -   Securely store host credentials (though for production, consider more robust secrets management).
+        
+-   **Script Execution:**
+    
+    -   Run generated or saved scripts on selected remote hosts.
+        
+    -   Option to run scripts with `sudo` privileges.
+        
+    -   View live execution output and errors.
+        
+-   **AI Analysis:**
+    
+    -   **Dry Run Analysis:** Get an AI-generated explanation of what a script will do before execution, including dependencies, expected outcomes, and potential issues.
+        
+    -   **Execution Output Analysis:** Analyze the output and errors from live script executions to aid in debugging and understanding.
+        
+-   **Pipeline Builder:**
+    
+    -   Visually construct multi-step pipelines by connecting hosts, scripts, and actions (like AI analysis, notifications).
+        
+    -   Save and load pipeline definitions.
+        
+    -   (Execution logic for pipelines is being developed/extended).
+        
+-   **Notifications:**
+    
+    -   Integrate with external services like Discord for execution notifications.
+        
+-   **Settings:**
+    
+    -   Configure AI API keys (Gemini, ChatGPT) and GitHub repository details.
+        
 
-    ```bash
-    git clone <your-repository-url>
-    cd <repository-folder>
+## Install Instructions
 
-### 2\. Create a Virtual Environment
+To install and set up AI-Runner, follow these steps:
 
-It is highly recommended to use a Python virtual environment to manage dependencies.
-
-Bash
-
-# Create the virtual environment
+1.  **Clone the repository:**
+    
+    ```
+    git clone <repository_url>
+    cd ai_runner
+    
+    ```
+    
+2.  **Create a Python virtual environment (recommended):**
+    
+    ```
     python3 -m venv venv
-
-    # Activate it (on Linux/macOS)
     source venv/bin/activate
-
-    # On Windows, use:
-    # venv\Scripts\activate
-
-### 3\. Install Requirements
-
-Install all the necessary Python packages using the `requirements.txt` file.
-
-Bash
-
-pip install -r requirements.txt
-
-### 4\. Set up the Database
-
-The application uses Flask-Migrate to manage database schemas. Run the following commands to initialize your database for the first time.
-
-Bash
-
-# Initialize the migration folder (only run this once per project)
+    
+    ```
+    
+3.  **Install dependencies:**
+    
+    ```
+    pip install -r requirements.txt
+    
+    ```
+    
+4.  **Set up Flask environment variables:**
+    
+    ```
+    export FLASK_APP=run.py
+    export FLASK_ENV=development # For development, use 'production' for deployment
+    
+    ```
+    
+    (You might want to add these to your `.bashrc` or `.zshrc` for persistence, or use a `.env` file with `python-dotenv`).
+    
+5.  **Initialize and migrate the database:** Since the database (`app.db`) is managed by Flask-Migrate, you need to set it up.
+    
+    ```
     flask db init
-
-    # Create the initial migration based on the models
-    flask db migrate -m "Initial migration with hosts table"
-
-    # Apply the migration to create the database and tables
+    flask db migrate -m "Initial database setup"
     flask db upgrade
+    
+    ```
+    
+    _If you previously had an `app.db` and deleted it, and are encountering errors with `flask db init`, you might need to delete the `migrations/` folder as well before running `flask db init`._
+    
 
-### 5\. Run the Application
+## Prerequisites Needed
 
-You can now start the Flask development server.
+Before running the application, ensure you have the following:
 
-Bash
+-   **Python 3.8+**: The application is built with Python.
+    
+-   **pip**: Python package installer.
+    
+-   **Git**: For cloning the repository.
+    
+-   **SSH Access to Remote Hosts**: To run scripts on remote machines, you'll need SSH access configured (e.g., SSH keys or password-based access, though SSH keys are recommended for security).
+    
+-   **AI API Keys (Optional but Recommended):**
+    
+    -   **Google Gemini API Key:** For AI script generation and analysis using Gemini models.
+        
+    -   **OpenAI API Key (ChatGPT):** For AI script generation and analysis using ChatGPT models.
+        
+    -   These keys are configured within the application's "Settings" page after launching.
+        
+-   **GitHub Personal Access Token (Optional but Recommended):**
+    
+    -   If you plan to push/pull scripts and pipelines from GitHub, you'll need a GitHub personal access token with appropriate repository permissions.
+        
+    -   This token and the target repository name are configured within the application's "Settings" page.
+        
+-   **Discord Webhook URL (Optional):**
+    
+    -   If you want to receive notifications via Discord. Configured in "Settings".
+        
 
-flask run
+## How to Run the App
 
-The application will be running at `http://0.0.0.0:5055`. You can access it from your browser.
+Once all prerequisites are met and installation steps are completed, you can run the Flask application:
 
+```
+flask run --host=0.0.0.0 --port=5055
+
+```
+
+This will start the Flask development server. You can then access the application in your web browser at `http://localhost:5055` (or the IP address of your server if running remotely, e.g., `http://100.116.246.164:5055`).
