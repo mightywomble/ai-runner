@@ -1,17 +1,17 @@
 
-# AI-Runner: Your Intelligent DevOps Assistant
+# Fysseree AIOps: Your Intelligent DevOps Assistant
 
 ## Summary of App
 
-AI-Runner is a web-based application designed to streamline DevOps operations by integrating AI-powered script generation, execution, and analysis with host management and pipeline automation. It provides a centralized platform for managing infrastructure tasks, automating workflows, and leveraging artificial intelligence to enhance efficiency and reduce manual effort.
+Fysseree AIOps is a web-based application designed to streamline DevOps operations by integrating AI-powered script generation, execution, and analysis with host management and pipeline automation. It provides a centralized platform for managing infrastructure tasks, automating workflows, and leveraging artificial intelligence to enhance efficiency and reduce manual effort.
 
 ## Meaning of App Name
 
-The name "AI-Runner" signifies the core functionality of the application: it's a platform that **runs** various scripts and automated tasks, heavily leveraging **Artificial Intelligence** (AI) to assist in generating, analyzing, and executing these operations. It implies an intelligent agent that executes commands and workflows.
+The name "Fysseree AIOps" signifies the core functionality of the application: "Fysseree" (meaning "intelligence" or "knowledge" in some contexts) combined with "AIOps" (Artificial Intelligence for IT Operations). It's a platform that **runs** various scripts and automated tasks, heavily leveraging **Artificial Intelligence** (AI) to assist in generating, analyzing, and executing these operations, implying an intelligent agent that executes commands and workflows to optimize IT operations.
 
 ## Purpose of App
 
-The primary purpose of AI-Runner is to empower DevOps engineers, system administrators, and developers with tools to:
+The primary purpose of Fysseree AIOps is to empower DevOps engineers, system administrators, and developers with tools to:
 
 -   **Generate scripts quickly:** Use natural language prompts to create Bash, Python, or Ansible scripts.
     
@@ -83,7 +83,7 @@ The primary purpose of AI-Runner is to empower DevOps engineers, system administ
 
 ## Install Instructions
 
-To install and set up AI-Runner, follow these steps:
+To install and set up Fysseree AIOps, follow these steps:
 
 1.  **Clone the repository:**
     
@@ -170,4 +170,4 @@ flask run --host=0.0.0.0 --port=5055
 
 ```
 
-This will start the Flask development server. You can then access the application in your web browser at `http://localhost:5055` (or the IP address of your server if running remotely, e.g., `http://100.116.246.164:5055`).
+This will start the Flask development server. You can then access the application in your web browser at `http://localhost:5055` (or the IP address of your server if running remotely, e.g., `http://100.116.246.164:5055`)
