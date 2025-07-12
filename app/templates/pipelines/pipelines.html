@@ -1,314 +1,419 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="flex h-[80vh] bg-gray-900 text-white">
-    <!-- Left Panel: Components -->
-    <div id="components-panel" class="w-1/4 bg-base-200 p-4 overflow-y-auto border-r border-base-300">
-        <h2 class="text-lg font-bold mb-4">Components</h2>
-        
-        <!-- Hosts Section -->
-        <div>
-            <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
-                <span><i class="fas fa-server fa-fw mr-2"></i>Hosts</span>
-                <i class="fas fa-chevron-up transform transition-transform"></i>
-            </button>
-            <div class="collapsible-content pl-4 pt-2 space-y-2">
-                {% for host in hosts %}
-                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="host" data-name="{{ host.name }}">
-                        <i class="fas fa-server fa-fw mr-2"></i>{{ host.name }}
+<div class="flex flex-col h-[85vh] bg-gray-900 text-white">
+    <!-- Top section with builder -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Left Panel: Components -->
+        <div id="components-panel" class="w-1/4 bg-base-200 p-4 overflow-y-auto border-r border-base-300">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold">Components</h2>
+                <button id="new-pipeline-btn" class="text-sm text-accent hover:underline" title="Clear the canvas and start a new pipeline">New Pipeline</button>
+            </div>
+            
+            <!-- Hosts Section -->
+            <div>
+                <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                    <span><i class="fas fa-server fa-fw mr-2"></i>Hosts</span>
+                    <i class="fas fa-chevron-up transform transition-transform"></i>
+                </button>
+                <div class="collapsible-content pl-4 pt-2 space-y-2">
+                    {% for host in hosts %}
+                        <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="host" data-name="{{ host.name }}">
+                            <i class="fas fa-server fa-fw mr-2"></i>{{ host.name }}
+                        </div>
+                    {% else %}
+                        <p class="text-xs text-gray-500">No hosts found.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Local Scripts Section -->
+            <div class="mt-4">
+                <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                    <span><i class="fas fa-scroll fa-fw mr-2 text-yellow-400"></i>Local Scripts</span>
+                    <i class="fas fa-chevron-up transform transition-transform"></i>
+                </button>
+                <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
+                    {% for script in local_scripts %}
+                        <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="script" data-name="{{ script.name }}" data-script-content="{{ script.content }}">
+                            <i class="fas fa-scroll fa-fw mr-2"></i>{{ script.name }}
+                        </div>
+                    {% else %}
+                        <p class="text-xs text-gray-500">No local scripts.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- GitHub Scripts Section -->
+            <div class="mt-4">
+                <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                    <span><i class="fab fa-github fa-fw mr-2 text-blue-400"></i>GitHub Scripts</span>
+                    <i class="fas fa-chevron-up transform transition-transform"></i>
+                </button>
+                <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
+                     {% for script in github_scripts %}
+                        <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 truncate draggable-item" title="{{ script.path }}" data-type="script" data-name="{{ script.path }}">
+                            <i class="{{ script.icon }} fa-fw mr-2"></i>{{ script.name }}
+                        </div>
+                    {% else %}
+                        <p class="text-xs text-gray-500">No GitHub scripts.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Actions Section -->
+            <div class="mt-4">
+                <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                    <span><i class="fas fa-bolt fa-fw mr-2"></i>Actions</span>
+                    <i class="fas fa-chevron-up transform transition-transform"></i>
+                </button>
+                <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
+                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="AI Analysis">
+                        <i class="fas fa-robot fa-fw mr-2 text-purple-400"></i>AI Analysis
                     </div>
-                {% else %}
-                    <p class="text-xs text-gray-500">No hosts found.</p>
-                {% endfor %}
+                    {% if notifications.discord %}
+                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="Notify Discord">
+                        <i class="fab fa-discord fa-fw mr-2 text-indigo-400"></i>Notify Discord
+                    </div>
+                    {% endif %}
+                     {% if notifications.email %}
+                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="Send Email">
+                        <i class="fas fa-envelope fa-fw mr-2 text-teal-400"></i>Send Email
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
-        <!-- Local Scripts Section -->
-        <div class="mt-4">
-            <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
-                <span><i class="fas fa-scroll fa-fw mr-2 text-yellow-400"></i>Local Scripts</span>
-                <i class="fas fa-chevron-up transform transition-transform"></i>
-            </button>
-            <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
-                {% for script in local_scripts %}
-                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="script" data-name="{{ script.name }}">
-                        <i class="fas fa-scroll fa-fw mr-2"></i>{{ script.name }}
-                    </div>
-                {% else %}
-                    <p class="text-xs text-gray-500">No local scripts.</p>
-                {% endfor %}
+        <!-- Middle Panel: Canvas -->
+        <div id="pipeline-canvas" class="flex-1 bg-base-100 p-4 relative">
+            <div id="canvas-placeholder" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-600 text-center pointer-events-none">
+                <i class="fas fa-mouse-pointer text-4xl mb-2"></i>
+                <p>Drag and drop components here</p>
             </div>
         </div>
 
-        <!-- GitHub Scripts Section -->
-        <div class="mt-4">
-            <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
-                <span><i class="fab fa-github fa-fw mr-2 text-blue-400"></i>GitHub Scripts</span>
-                <i class="fas fa-chevron-up transform transition-transform"></i>
-            </button>
-            <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
-                 {% for script in github_scripts %}
-                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 truncate draggable-item" title="{{ script.path }}" data-type="script" data-name="{{ script.path }}">
-                        <i class="{{ script.icon }} fa-fw mr-2"></i>{{ script.name }}
-                    </div>
-                {% else %}
-                    <p class="text-xs text-gray-500">No GitHub scripts.</p>
-                {% endfor %}
+        <!-- Right Panel: YAML Output & Controls -->
+        <div class="w-1/3 bg-base-200 p-4 flex flex-col border-l border-base-300">
+            <h2 class="text-lg font-bold mb-4">Pipeline YAML</h2>
+            <div class="flex-1 bg-base-100 rounded-md p-2 font-mono text-xs overflow-auto border border-base-300">
+                <pre><code id="yaml-output"># YAML will be generated here...</code></pre>
             </div>
-        </div>
-
-        <!-- Actions Section -->
-        <div class="mt-4">
-            <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
-                <span><i class="fas fa-bolt fa-fw mr-2"></i>Actions</span>
-                <i class="fas fa-chevron-up transform transition-transform"></i>
-            </button>
-            <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
-                <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="AI Analysis">
-                    <i class="fas fa-robot fa-fw mr-2 text-purple-400"></i>AI Analysis
-                </div>
-                {% if notifications.discord %}
-                <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="Notify Discord">
-                    <i class="fab fa-discord fa-fw mr-2 text-indigo-400"></i>Notify Discord
-                </div>
-                {% endif %}
-                 {% if notifications.email %}
-                <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="Send Email">
-                    <i class="fas fa-envelope fa-fw mr-2 text-teal-400"></i>Send Email
-                </div>
-                {% endif %}
+            <div class="mt-4 grid grid-cols-3 gap-2">
+                <button id="pipeline-dry-run-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-play mr-2"></i>Dry Run</button>
+                <button id="pipeline-run-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-rocket mr-2"></i>Run</button>
+                <button id="pipeline-sudo-run-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-user-shield mr-2"></i>Sudo Run</button>
             </div>
         </div>
     </div>
 
-    <!-- Middle Panel: Canvas -->
-    <div id="pipeline-canvas" class="flex-1 bg-base-100 p-4 relative">
-        <div id="canvas-placeholder" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-600 text-center pointer-events-none">
-            <i class="fas fa-mouse-pointer text-4xl mb-2"></i>
-            <p>Drag and drop components here</p>
+    <!-- Execution Output Container -->
+    <div id="run-output-container" class="hidden bg-base-200 border-t-4 border-accent shadow-lg rounded-t-lg mx-6">
+        <div class="p-4 border-b border-base-300 flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-white">Pipeline Execution Output</h2>
+            <button id="clear-run-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
         </div>
-    </div>
-
-    <!-- Right Panel: YAML Output & Controls -->
-    <div class="w-1/3 bg-base-200 p-4 flex flex-col border-l border-base-300">
-        <h2 class="text-lg font-bold mb-4">Pipeline YAML</h2>
-        <div class="flex-1 bg-base-100 rounded-md p-2 font-mono text-xs overflow-auto border border-base-300">
-            <pre><code id="yaml-output"># YAML will be generated here...</code></pre>
-        </div>
-        <div class="mt-4 flex space-x-2">
-            <button class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 flex-1"><i class="fas fa-play mr-2"></i>Dry Run</button>
-            <button class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 flex-1"><i class="fas fa-rocket mr-2"></i>Run Pipeline</button>
-        </div>
+        <div id="run-output-content" class="p-6 font-mono text-sm max-h-64 overflow-y-auto"></div>
     </div>
 </div>
 
-<!-- JS Libraries for Drag & Drop and Lines -->
+<!-- Modals -->
+<div id="save-pipeline-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-md border border-base-300">
+        <div class="p-6 border-b border-base-300"><h3 class="text-lg font-semibold text-white">Save Pipeline</h3></div>
+        <div class="p-6">
+            <label for="pipeline-name" class="block text-sm font-medium text-gray-400 mb-2">Pipeline Name</label>
+            <input type="text" id="pipeline-name" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 text-white" placeholder="e.g., deploy-web-app">
+        </div>
+        <div class="p-6 bg-base-100 border-t border-base-300 flex justify-end space-x-4">
+            <button id="cancel-save-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
+            <button id="confirm-save-btn" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">Save and Run</button>
+        </div>
+    </div>
+</div>
+<div id="output-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-4xl border border-base-300 flex flex-col" style="max-height: 90vh;">
+        <div class="p-6 border-b border-base-300 flex justify-between items-center">
+            <h3 id="output-modal-title" class="text-lg font-semibold text-white">AI Analysis</h3>
+            <button id="close-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div id="output-modal-content" class="p-6 overflow-y-auto flex-1 font-mono text-sm"></div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leader-line-new/leader-line.min.js"></script>
-
 <script>
-try {
-    // --- Collapsible Sidebar Sections ---
-    document.querySelectorAll('.collapsible-trigger').forEach(button => {
-        button.addEventListener('click', () => {
-            const content = button.nextElementSibling;
-            const icon = button.querySelector('i.fa-chevron-up');
-            content.classList.toggle('hidden');
-            icon.classList.toggle('rotate-180');
-        });
-    });
-    document.querySelector('.collapsible-trigger').click();
-
-    // --- Pipeline State ---
-    const pipeline = {
-        nodes: {},
-        connections: []
-    };
-    let nodeIdCounter = 0;
-    let lines = [];
-    let selectedOutput = null;
-
-    const canvas = document.getElementById('pipeline-canvas');
-    const yamlOutput = document.getElementById('yaml-output');
-    const placeholder = document.getElementById('canvas-placeholder');
-
-    // --- YAML Generation ---
-    function updateYaml() {
-        let yaml = 'name: New Pipeline\n\n';
-        yaml += 'on: [workflow_dispatch]\n\n';
-        yaml += 'jobs:\n';
-
-        if (Object.keys(pipeline.nodes).length === 0) {
-            yamlOutput.textContent = '# YAML will be generated here...';
-            return;
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        let pipeline = { nodes: {}, connections: [] };
+        let nodeIdCounter = 0, lines = [], selectedOutput = null, useSudo = false, currentPipelineId = null;
+        const canvas = document.getElementById('pipeline-canvas');
+        const yamlOutput = document.getElementById('yaml-output');
+        const placeholder = document.getElementById('canvas-placeholder');
+        const saveModal = document.getElementById('save-pipeline-modal');
+        const outputModal = document.getElementById('output-modal');
+        const runOutputContainer = document.getElementById('run-output-container');
+        const runOutputContent = document.getElementById('run-output-content');
+        
+        function resetCanvas() {
+            canvas.querySelectorAll('.pipeline-node').forEach(n => n.remove());
+            lines.forEach(l => l.remove());
+            lines = [];
+            pipeline = { nodes: {}, connections: [] };
+            currentPipelineId = null;
+            nodeIdCounter = 0;
+            updateYaml();
+            placeholder.classList.remove('hidden');
         }
 
-        Object.values(pipeline.nodes).forEach(node => {
-            const jobName = node.name.replace(/[.\s/]+/g, '_').toLowerCase() + `_${node.id}`;
-            yaml += `  ${jobName}:\n`;
-            
-            const dependencies = pipeline.connections
-                .filter(conn => conn.to === node.id)
-                .map(conn => {
-                    const fromNode = pipeline.nodes[conn.from];
+        document.getElementById('new-pipeline-btn').addEventListener('click', resetCanvas);
+        
+        function updateYaml() {
+            let yaml = 'name: New Pipeline\n\non: [workflow_dispatch]\n\njobs:\n';
+            if (Object.keys(pipeline.nodes).length === 0) {
+                yamlOutput.textContent = '# YAML will be generated here...';
+                return;
+            }
+            Object.values(pipeline.nodes).forEach(node => {
+                const jobName = node.name.replace(/[.\s/]+/g, '_').toLowerCase() + `_${node.id}`;
+                yaml += `  ${jobName}:\n`;
+                const dependencies = pipeline.connections.filter(c => c.to === node.id).map(c => {
+                    const fromNode = pipeline.nodes[c.from];
                     return fromNode.name.replace(/[.\s/]+/g, '_').toLowerCase() + `_${fromNode.id}`;
                 });
+                if (dependencies.length > 0) yaml += `    needs: [${dependencies.join(', ')}]\n`;
+                const hostNodeId = pipeline.connections.find(c => c.to === node.id && pipeline.nodes[c.from].type === 'host')?.from;
+                const hostName = hostNodeId ? pipeline.nodes[hostNodeId].name : 'ubuntu-latest';
+                yaml += `    runs-on: ${hostName}\n`;
+                yaml += `    steps:\n      - name: ${node.name}\n`;
+                if (node.type === 'script' && node.content) {
+                    yaml += `        run: |\n`;
+                    node.content.split('\n').forEach(line => { yaml += `          ${line}\n`; });
+                } else if (node.type === 'action') {
+                    yaml += `        uses: local/${node.name.toLowerCase().replace(' ', '-')}@v1\n`;
+                } else {
+                     yaml += `        run: echo "Executing ${node.type}: ${node.name}"\n`;
+                }
+            });
+            yamlOutput.textContent = yaml;
+        }
 
-            if (dependencies.length > 0) {
-                yaml += `    needs: [${dependencies.join(', ')}]\n`;
+        function createNode(type, name, x, y, content = '') {
+            const nodeId = `node-${nodeIdCounter++}`;
+            const nodeEl = document.createElement('div');
+            nodeEl.id = nodeId;
+            nodeEl.className = 'pipeline-node absolute bg-base-200 border border-base-300 rounded-md p-3 shadow-lg flex items-center';
+            nodeEl.style.left = `${x}px`;
+            nodeEl.style.top = `${y}px`;
+            nodeEl.innerHTML = `<span class="flex-1">${name}</span><div class="connector-out"></div><div class="connector-in"></div>`;
+            canvas.appendChild(nodeEl);
+            
+            const nodeData = { id: nodeId, name, type, el: nodeEl, content };
+            pipeline.nodes[nodeId] = nodeData;
+            
+            if (type === 'script' && !content) {
+                fetch("{{ url_for('scripts.get_github_script_content') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: name }) })
+                .then(res => res.json()).then(data => {
+                    if (!data.error) nodeData.content = data.content;
+                    updateYaml();
+                });
+            } else {
+                updateYaml();
             }
 
-            yaml += `    runs-on: ubuntu-latest\n`;
-            yaml += `    steps:\n`;
-            yaml += `      - name: ${node.name}\n`;
-            yaml += `        run: echo "Executing ${node.type}: ${node.name}"\n`;
-        });
-        
-        yamlOutput.textContent = yaml;
-    }
-
-    // --- Drag and Drop Logic ---
-    interact('.draggable-item').draggable({
-        listeners: {
-            start (event) {
-                const original = event.target;
-                const clone = original.cloneNode(true);
-                clone.classList.add('dragging-clone');
-                document.body.appendChild(clone);
-                event.interaction.clone = clone;
-                const originalRect = original.getBoundingClientRect();
-                clone.style.position = 'absolute';
-                clone.style.left = `${originalRect.left}px`;
-                clone.style.top = `${originalRect.top}px`;
-                clone.style.width = `${originalRect.width}px`;
-            },
-            move (event) {
-                const clone = event.interaction.clone;
-                const x = (parseFloat(clone.getAttribute('data-x')) || 0) + event.dx;
-                const y = (parseFloat(clone.getAttribute('data-y')) || 0) + event.dy;
-                clone.style.transform = `translate(${x}px, ${y}px)`;
-                clone.setAttribute('data-x', x);
-                clone.setAttribute('data-y', y);
-            },
-            end (event) {
-                const clone = event.interaction.clone;
-                if (clone) clone.remove();
-            }
+            interact(nodeEl).draggable({
+                ignoreFrom: '.connector-out, .connector-in',
+                modifiers: [interact.modifiers.restrictRect({ restriction: 'parent', endOnly: true })],
+                listeners: {
+                    move(event) {
+                        const target = event.target;
+                        target.style.left = `${parseFloat(target.style.left) + event.dx}px`;
+                        target.style.top = `${parseFloat(target.style.top) + event.dy}px`;
+                        lines.forEach(line => line.position());
+                    }
+                }
+            });
         }
-    });
 
-    interact('#pipeline-canvas').dropzone({
-        accept: '.draggable-item',
-        ondrop: function (event) {
-            const originalElement = event.relatedTarget;
-            placeholder.classList.add('hidden');
-            const canvasRect = canvas.getBoundingClientRect();
-            const x = event.dragEvent.clientX - canvasRect.left;
-            const y = event.dragEvent.clientY - canvasRect.top;
-            createNode(originalElement.dataset.type, originalElement.dataset.name, x, y);
-        }
-    });
-    
-    function createNode(type, name, x, y) {
-        const nodeId = `node-${nodeIdCounter++}`;
-        const nodeEl = document.createElement('div');
-        nodeEl.id = nodeId;
-        nodeEl.className = 'pipeline-node absolute bg-base-200 border border-base-300 rounded-md p-3 shadow-lg flex items-center';
-        nodeEl.style.left = `${x}px`;
-        nodeEl.style.top = `${y}px`;
-        
-        nodeEl.innerHTML = `
-            <span class="flex-1">${name}</span>
-            <div class="connector-out absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-accent rounded-full cursor-pointer"></div>
-            <div class="connector-in absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-gray-400 rounded-full cursor-pointer"></div>
-        `;
-
-        canvas.appendChild(nodeEl);
-        pipeline.nodes[nodeId] = { id: nodeId, name: name, type: type, el: nodeEl };
-        updateYaml();
-
-        interact(nodeEl).draggable({
-            ignoreFrom: '.connector-out, .connector-in',
-            modifiers: [
-                interact.modifiers.restrictRect({
-                    restriction: 'parent',
-                    endOnly: true
-                })
-            ],
+        interact('.draggable-item').draggable({
             listeners: {
-                move(event) {
-                    const target = event.target;
-                    target.style.left = `${parseFloat(target.style.left) + event.dx}px`;
-                    target.style.top = `${parseFloat(target.style.top) + event.dy}px`;
-                    lines.forEach(line => line.position());
+                start (event) {
+                    const original = event.target;
+                    const clone = original.cloneNode(true);
+                    clone.classList.add('dragging-clone');
+                    document.body.appendChild(clone);
+                    event.interaction.clone = clone;
+                    const originalRect = original.getBoundingClientRect();
+                    clone.style.position = 'absolute';
+                    clone.style.left = `${originalRect.left}px`;
+                    clone.style.top = `${originalRect.top}px`;
+                    clone.style.width = `${originalRect.width}px`;
+                },
+                move (event) {
+                    const clone = event.interaction.clone;
+                    const x = (parseFloat(clone.getAttribute('data-x')) || 0) + event.dx;
+                    const y = (parseFloat(clone.getAttribute('data-y')) || 0) + event.dy;
+                    clone.style.transform = `translate(${x}px, ${y}px)`;
+                    clone.setAttribute('data-x', x);
+                    clone.setAttribute('data-y', y);
+                },
+                end (event) {
+                    const clone = event.interaction.clone;
+                    if (clone) clone.remove();
                 }
             }
         });
-    }
 
-    // --- Connection Logic ---
-    canvas.addEventListener('mousedown', function(event) {
-        if (event.target.classList.contains('connector-out')) {
-            event.stopPropagation();
-            selectedOutput = event.target; // Select the connector dot itself
-            selectedOutput.parentElement.classList.add('connecting');
-        }
-    });
+        interact('#pipeline-canvas').dropzone({
+            accept: '.draggable-item',
+            ondrop: function (event) {
+                const originalElement = event.relatedTarget;
+                placeholder.classList.add('hidden');
+                const canvasRect = canvas.getBoundingClientRect();
+                const x = event.dragEvent.clientX - canvasRect.left;
+                const y = event.dragEvent.clientY - canvasRect.top;
+                createNode(originalElement.dataset.type, originalElement.dataset.name, x, y, originalElement.dataset.scriptContent);
+            }
+        });
 
-    canvas.addEventListener('mouseup', function(event) {
-        if (selectedOutput && event.target.classList.contains('connector-in')) {
-            const inputConnector = event.target;
-            const outputNode = selectedOutput.parentElement;
-            const inputNode = inputConnector.parentElement;
+        document.addEventListener('mousedown', function(event) {
+            if (event.target.classList.contains('connector-out')) {
+                event.stopPropagation();
+                selectedOutput = event.target;
+                selectedOutput.parentElement.classList.add('connecting');
+            }
+        });
 
-            if (outputNode.id !== inputNode.id) {
-                // Draw the line between the actual connector elements
-                const line = new LeaderLine(selectedOutput, inputConnector, {
-                    color: '#2f81f7',
-                    size: 2,
-                    path: 'fluid',
-                    endPlug: 'arrow1'
-                });
-                lines.push(line);
-                // Store the connection using the parent node IDs
-                pipeline.connections.push({ from: outputNode.id, to: inputNode.id });
-                updateYaml();
+        document.addEventListener('mouseup', function(event) {
+            if (selectedOutput && event.target.classList.contains('connector-in')) {
+                const inputConnector = event.target;
+                const outputNode = selectedOutput.parentElement;
+                const inputNode = inputConnector.parentElement;
+                if (outputNode.id !== inputNode.id) {
+                    const line = new LeaderLine(selectedOutput, inputConnector, { color: '#2f81f7', size: 2, path: 'fluid', endPlug: 'arrow1' });
+                    lines.push(line);
+                    pipeline.connections.push({ from: outputNode.id, to: inputNode.id });
+                    updateYaml();
+                }
+            }
+            if(selectedOutput) selectedOutput.parentElement.classList.remove('connecting');
+            selectedOutput = null;
+        });
+
+        document.getElementById('confirm-save-btn').addEventListener('click', () => {
+            const pipelineName = document.getElementById('pipeline-name').value;
+            if (!pipelineName) return alert('Please enter a name for the pipeline.');
+            
+            const serializableNodes = {};
+            for (const nodeId in pipeline.nodes) {
+                const { el, ...rest } = pipeline.nodes[nodeId];
+                serializableNodes[nodeId] = rest;
+            }
+            
+            const payload = { name: pipelineName, yaml: yamlOutput.textContent, graph: { nodes: serializableNodes, connections: pipeline.connections } };
+            
+            fetch("{{ url_for('pipelines.save_pipeline') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+            .then(res => res.json()).then(data => {
+                if (data.success) {
+                    hideModal(saveModal);
+                    currentPipelineId = data.pipeline_id;
+                    executePipeline(data.pipeline_id);
+                } else {
+                    alert('Error saving pipeline: ' + data.error);
+                }
+            });
+        });
+
+        document.querySelectorAll('.collapsible-trigger').forEach(button => {
+            button.addEventListener('click', () => {
+                const content = button.nextElementSibling;
+                const icon = button.querySelector('i.fa-chevron-up');
+                content.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+            });
+        });
+        document.querySelector('.collapsible-trigger').click();
+
+        function showModal(modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        function hideModal(modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+        document.getElementById('pipeline-dry-run-btn').addEventListener('click', function() {
+            const yaml = yamlOutput.textContent;
+            if (yaml.startsWith('# YAML will be')) return alert('Please build a pipeline first.');
+            
+            document.getElementById('output-modal-title').textContent = 'Pipeline Dry Run Analysis';
+            const content = document.getElementById('output-modal-content');
+            content.innerHTML = '<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing pipeline...</div>';
+            showModal(outputModal);
+
+            fetch("{{ url_for('pipelines.dry_run_yaml') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ yaml: yaml, ai_provider: document.getElementById('ai-provider').value })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) content.innerHTML = `<pre class="text-red-500">${data.error}</pre>`;
+                else content.innerHTML = `<pre class="whitespace-pre-wrap">${data.output}</pre>`;
+            }).catch(err => content.innerHTML = `<pre class="text-red-500">${err.message}</pre>`);
+        });
+
+        function handleRun(isSudo) {
+            useSudo = isSudo;
+            if (currentPipelineId) {
+                executePipeline(currentPipelineId);
+            } else {
+                showModal(saveModal);
             }
         }
-        if(selectedOutput) {
-            selectedOutput.parentElement.classList.remove('connecting');
-        }
-        selectedOutput = null;
-    });
 
-} catch (e) {
-    console.error("Pipeline Builder Error:", e);
-    alert("An error occurred while initializing the pipeline builder. Check the console for details.");
-}
+        document.getElementById('pipeline-run-btn').addEventListener('click', () => handleRun(false));
+        document.getElementById('pipeline-sudo-run-btn').addEventListener('click', () => handleRun(true));
+        document.getElementById('cancel-save-btn').addEventListener('click', () => hideModal(saveModal));
+        document.getElementById('close-output-btn').addEventListener('click', () => hideModal(outputModal));
+        document.getElementById('clear-run-output-btn').addEventListener('click', () => {
+            document.getElementById('run-output-content').innerHTML = '';
+            document.getElementById('run-output-container').classList.add('hidden');
+        });
+
+        function executePipeline(pipelineId) {
+            runOutputContainer.classList.remove('hidden');
+            runOutputContent.innerHTML = '<div class="p-4"><i class="fas fa-spinner fa-spin mr-2"></i>Executing pipeline...</div>';
+            fetch(`{{ url_for('pipelines.run_pipeline', pipeline_id=0) }}`.replace('0', pipelineId), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ use_sudo: useSudo })
+            }).then(res => res.json()).then(data => {
+                runOutputContent.innerHTML = '';
+                if (data.error) {
+                    runOutputContent.innerHTML = `<pre class="text-red-500">${data.error}</pre>`;
+                    return;
+                }
+                data.results.forEach(result => {
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'mb-4 p-4 rounded-md border ' + (result.success ? 'border-green-500' : 'border-red-500');
+                    resultDiv.innerHTML = `<h4 class="font-bold text-white">${result.step_name}</h4><pre>${result.output || result.error}</pre>`;
+                    runOutputContent.appendChild(resultDiv);
+                });
+            });
+        }
+
+    } catch (e) {
+        console.error("Pipeline Builder Error:", e);
+        alert("A critical error occurred while initializing the pipeline builder. Check the console for details.");
+    }
+});
 </script>
 <style>
-    .pipeline-node .connector-out, .pipeline-node .connector-in {
-        border: 2px solid #161b22;
-        transition: transform 0.2s ease-in-out;
-    }
-    .pipeline-node:hover .connector-out, .pipeline-node:hover .connector-in {
-        transform: scale(1.5);
-    }
-    .pipeline-node.connecting .connector-out {
-        animation: pulse 1s infinite;
-    }
-    @keyframes pulse {
-        0% { box-shadow: 0 0 0 0 rgba(47, 129, 247, 0.7); }
-        70% { box-shadow: 0 0 0 10px rgba(47, 129, 247, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(47, 129, 247, 0); }
-    }
-    .dragging-clone {
-        z-index: 1000;
-        opacity: 0.7;
-        pointer-events: none;
-    }
-    #pipeline-canvas {
-        overflow: visible;
-    }
+    .pipeline-node .connector-out, .pipeline-node .connector-in { border: 2px solid #161b22; transition: transform 0.2s ease-in-out; }
+    .pipeline-node:hover .connector-out, .pipeline-node:hover .connector-in { transform: scale(1.5); }
+    .pipeline-node.connecting .connector-out { animation: pulse 1s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(47, 129, 247, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(47, 129, 247, 0); } 100% { box-shadow: 0 0 0 0 rgba(47, 129, 247, 0); } }
+    .dragging-clone { z-index: 1000; opacity: 0.7; pointer-events: none; }
+    #pipeline-canvas { overflow: visible; }
+    .connector-out { position: absolute; right: -8px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; background-color: #2f81f7; border-radius: 50%; cursor: pointer; }
+    .connector-in { position: absolute; left: -8px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; background-color: #6b7280; border-radius: 50%; cursor: pointer; }
 </style>
 {% endblock %}

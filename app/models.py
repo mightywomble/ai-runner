@@ -1,4 +1,5 @@
 from app import db
+import datetime
 
 class Host(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -22,3 +23,14 @@ class Script(db.Model):
 
     def __repr__(self):
         return f'<Script {self.name}>'
+
+class Pipeline(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    yaml_content = db.Column(db.Text, nullable=False)
+    # Store the graph structure for the execution engine
+    graph_json = db.Column(db.Text, nullable=False)
+
+    def __repr__(self):
+        return f'<Pipeline {self.name}>'
