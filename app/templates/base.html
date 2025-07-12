@@ -86,11 +86,11 @@
                 </a>
             </nav>
             <div class="px-4 py-4 border-t border-base-300">
-                 <a href="{{ url_for('settings.settings') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'settings' in request.endpoint else '' }}">
+                 <a href="{{ url_for('settings.settings') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'settings' in request.endpoint else '' }}"> {# Changed settings_page to settings #}
                     <i class="fas fa-cog fa-fw mr-3"></i>
                     <span class="sidebar-text">Settings</span>
                 </a>
-                 <a href="#" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'users' in request.endpoint else '' }}">
+                 <a href="{{ url_for('users.users_list') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'users' in request.endpoint else '' }}">
                     <i class="fas fa-users-cog fa-fw mr-3"></i>
                     <span class="sidebar-text">Users</span>
                 </a>
@@ -112,9 +112,19 @@
                             <option value="chatgpt">ChatGPT</option>
                         </select>
                     </div>
-                     <button class="p-2 rounded-full hover:bg-base-300">
-                        <i class="fas fa-user-circle text-xl"></i>
-                    </button>
+                    {# Login/Logout and User Info Section #}
+                    {% if current_user.is_authenticated %}
+                        <div class="flex items-center space-x-2">
+                            <span class="text-gray-400 text-sm">Welcome, <strong class="text-white">{{ current_user.username }}</strong></span>
+                            <a href="{{ url_for('auth.logout') }}" class="p-2 rounded-full hover:bg-base-300" title="Logout">
+                                <i class="fas fa-sign-out-alt text-xl text-red-400"></i>
+                            </a>
+                        </div>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="p-2 rounded-full hover:bg-base-300" title="Login">
+                            <i class="fas fa-sign-in-alt text-xl text-green-400"></i>
+                        </a>
+                    {% endif %}
                 </div>
             </header>
             

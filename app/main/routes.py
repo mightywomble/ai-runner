@@ -1,8 +1,9 @@
 from flask import render_template, request, jsonify
+from flask_login import login_required, current_user # Import login_required and current_user
 from . import bp
 from config import Config
 from app import db
-from app.models import Host, Script # Import Script model
+from app.models import Host, Script
 import google.generativeai as genai
 import openai
 import paramiko
@@ -11,10 +12,13 @@ import base64
 
 @bp.route('/')
 @bp.route('/index')
+@login_required # Add this decorator to protect the route
 def index():
+    # You can now access current_user here if needed
     return render_template('index.html', title='Home')
 
 @bp.route('/generate-script', methods=['POST'])
+@login_required # Protect this route too
 def generate_script():
     data = request.get_json()
     prompt = data.get('prompt')
@@ -42,6 +46,7 @@ def generate_script():
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/dry-run', methods=['POST'])
+@login_required # Protect this route
 def dry_run():
     data = request.get_json()
     script = data.get('script')
@@ -68,11 +73,13 @@ def dry_run():
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/get-hosts', methods=['GET'])
+@login_required # Protect this route
 def get_hosts():
     hosts = Host.query.all()
     return jsonify([{'id': host.id, 'name': host.name} for host in hosts])
 
 @bp.route('/run-script', methods=['POST'])
+@login_required # Protect this route
 def run_script():
     data = request.get_json()
     script = data.get('script')
@@ -98,6 +105,7 @@ def run_script():
     return jsonify({'results': results})
 
 @bp.route('/analyze-output', methods=['POST'])
+@login_required # Protect this route
 def analyze_output():
     data = request.get_json()
     script = data.get('script')
@@ -120,7 +128,7 @@ def analyze_output():
             analysis = response.text
         else:
             api_key = app_config.get('chatgpt_api_key')
-            if not api_key: return jsonify({'error': 'ChatGPT API key is not configured.'}), 500
+            if not api_key: return jsonify({'error': 'ChatGPT API key is not configured in settings.'}), 500
             client = openai.OpenAI(api_key=api_key)
             response = client.chat.completions.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": analysis_prompt}])
             analysis = response.choices[0].message.content
@@ -129,6 +137,7 @@ def analyze_output():
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/save-script', methods=['POST'])
+@login_required # Protect this route
 def save_script():
     data = request.get_json()
     script_content = data.get('content') # Changed from 'script_content' to 'content' for consistency with frontend
@@ -149,6 +158,7 @@ def save_script():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bp.route('/test-ai-provider', methods=['POST'])
+@login_required # Protect this route
 def test_ai_provider():
     data = request.get_json()
     provider = data.get('provider')
