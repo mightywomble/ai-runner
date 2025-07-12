@@ -12,7 +12,6 @@ import base64
 @bp.route('/')
 @bp.route('/index')
 def index():
-    # In a future step, we will query and display these saved scripts.
     return render_template('index.html', title='Home')
 
 @bp.route('/generate-script', methods=['POST'])
@@ -21,13 +20,9 @@ def generate_script():
     prompt = data.get('prompt')
     script_type = data.get('script_type')
     ai_provider = data.get('ai_provider')
-    
-    if not prompt or not script_type or not ai_provider:
-        return jsonify({'error': 'Missing required data.'}), 400
-
+    if not prompt or not script_type or not ai_provider: return jsonify({'error': 'Missing required data.'}), 400
     app_config = Config.get_app_config() or {}
     full_prompt = f"Generate a {script_type} script that does the following: {prompt}. The script should be complete, correct, and ready to run. Only output the code itself, with no explanation or markdown formatting."
-
     try:
         if ai_provider == 'gemini':
             api_key = app_config.get('gemini_api_key')
@@ -36,7 +31,7 @@ def generate_script():
             model = genai.GenerativeModel('gemini-1.5-flash')
             response = model.generate_content(full_prompt)
             script = response.text
-        else: # ChatGPT
+        else:
             api_key = app_config.get('chatgpt_api_key')
             if not api_key: return jsonify({'error': 'ChatGPT API key is not configured in settings.'}), 500
             client = openai.OpenAI(api_key=api_key)
@@ -62,7 +57,7 @@ def dry_run():
             model = genai.GenerativeModel('gemini-1.5-flash')
             response = model.generate_content(dry_run_prompt)
             output = response.text
-        else: # ChatGPT
+        else:
             api_key = app_config.get('chatgpt_api_key')
             if not api_key: return jsonify({'error': 'ChatGPT API key is not configured in settings.'}), 500
             client = openai.OpenAI(api_key=api_key)
@@ -110,12 +105,10 @@ def analyze_output():
     error = data.get('error')
     ai_provider = data.get('ai_provider')
     if not script or not ai_provider: return jsonify({'error': 'Missing data for analysis.'}), 400
-    
     if error:
         analysis_prompt = f"The following script failed to execute. Analyze the script and the error message to determine the cause and suggest troubleshooting steps. Use 'HEADING: ' to mark section titles.\n\nScript:\n```\n{script}\n```\n\nError:\n```\n{error}\n```"
     else:
         analysis_prompt = f"Analyze the output of the following script. Provide a summary of what the output means. Use 'HEADING: ' to mark section titles.\n\nScript:\n```\n{script}\n```\n\nOutput:\n```\n{output}\n```"
-    
     app_config = Config.get_app_config() or {}
     try:
         if ai_provider == 'gemini':
@@ -125,7 +118,7 @@ def analyze_output():
             model = genai.GenerativeModel('gemini-1.5-flash')
             response = model.generate_content(analysis_prompt)
             analysis = response.text
-        else: # ChatGPT
+        else:
             api_key = app_config.get('chatgpt_api_key')
             if not api_key: return jsonify({'error': 'ChatGPT API key is not configured in settings.'}), 500
             client = openai.OpenAI(api_key=api_key)
@@ -142,7 +135,6 @@ def save_script():
     script_name = data.get('script_name')
     script_type = data.get('script_type')
     if not script_content or not script_name or not script_type: return jsonify({'success': False, 'error': 'Missing data.'}), 400
-    
     new_script = Script(name=script_name, content=script_content, script_type=script_type)
     db.session.add(new_script)
     try:
@@ -151,3 +143,32 @@ def save_script():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/test-ai-provider', methods=['POST'])
+def test_ai_provider():
+    data = request.get_json()
+    provider = data.get('provider')
+    app_config = Config.get_app_config() or {}
+
+    if not provider:
+        return jsonify({'success': False, 'error': 'No provider specified.'}), 400
+
+    try:
+        if provider == 'gemini':
+            api_key = app_config.get('gemini_api_key')
+            if not api_key:
+                return jsonify({'success': False, 'error': 'Gemini API key not set in Settings.'}), 400
+            genai.configure(api_key=api_key)
+            genai.list_models()
+        elif provider == 'chatgpt':
+            api_key = app_config.get('chatgpt_api_key')
+            if not api_key:
+                return jsonify({'success': False, 'error': 'ChatGPT API key not set in Settings.'}), 400
+            client = openai.OpenAI(api_key=api_key)
+            client.models.list()
+        else:
+            return jsonify({'success': False, 'error': 'Unknown provider.'}), 400
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})

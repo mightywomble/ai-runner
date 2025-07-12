@@ -71,7 +71,10 @@
             <header class="h-16 bg-base-200 border-b border-base-300 flex items-center justify-between px-6 flex-shrink-0">
                 <h1 class="text-xl font-semibold text-white">{{ title }}</h1>
                 <div class="flex items-center space-x-4">
-                    <div class="relative">
+                    <div class="flex items-center space-x-2">
+                        <button id="test-ai-btn" class="p-2 rounded-full hover:bg-base-300" title="Test AI Provider Connection">
+                            <i id="test-ai-icon" class="fas fa-plug text-gray-400"></i>
+                        </button>
                         <select id="ai-provider" class="bg-base-300 text-white border border-gray-600 rounded-md pl-3 pr-8 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-base-200 focus:ring-accent">
                             <option value="gemini">Gemini</option>
                             <option value="chatgpt">ChatGPT</option>
@@ -99,5 +102,48 @@
         </div>
     </div>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // This script is in base.html as it's relevant to the header on all pages
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                const testAiBtn = document.getElementById('test-ai-btn');
+                const testAiIcon = document.getElementById('test-ai-icon');
+                const aiProviderSelect = document.getElementById('ai-provider');
+
+                testAiBtn.addEventListener('click', function() {
+                    const provider = aiProviderSelect.value;
+                    
+                    testAiIcon.className = 'fas fa-spinner fa-spin text-gray-400';
+
+                    fetch("{{ url_for('main.test_ai_provider') }}", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ provider: provider })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            testAiIcon.className = 'fas fa-check-circle text-green-500';
+                        } else {
+                            testAiIcon.className = 'fas fa-times-circle text-red-500';
+                            alert(`Test failed for ${provider}: ${data.error}`);
+                        }
+                    })
+                    .catch(err => {
+                        testAiIcon.className = 'fas fa-exclamation-triangle text-yellow-500';
+                        alert('An error occurred during the test.');
+                        console.error('AI Test Error:', err);
+                    })
+                    .finally(() => {
+                        setTimeout(() => {
+                            testAiIcon.className = 'fas fa-plug text-gray-400';
+                        }, 5000);
+                    });
+                });
+            } catch (e) {
+                console.error("Error setting up AI test button:", e);
+            }
+        });
+    </script>
 </body>
 </html>

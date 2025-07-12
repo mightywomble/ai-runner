@@ -2,6 +2,7 @@ from flask import Flask
 from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_cors import CORS
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -9,6 +10,9 @@ migrate = Migrate()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # Initialize CORS
+    CORS(app)
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -19,10 +23,10 @@ def create_app(config_class=Config):
 
     from app.hosts import bp as hosts_bp
     app.register_blueprint(hosts_bp, url_prefix='/hosts')
-    
+
     from app.scripts import bp as scripts_bp
     app.register_blueprint(scripts_bp, url_prefix='/scripts')
-
+    
     from app.pipelines import bp as pipelines_bp
     app.register_blueprint(pipelines_bp, url_prefix='/pipelines')
 

@@ -64,7 +64,12 @@
     <div id="run-output-container" class="hidden bg-base-200 border border-base-300 shadow-lg rounded-lg mt-6">
         <div class="p-6 border-b border-base-300 flex justify-between items-center">
             <h2 class="text-lg font-semibold text-white">Execution Output</h2>
-            <button id="clear-run-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            <div class="flex items-center space-x-4">
+                <button id="analyze-output-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md text-sm">
+                    <i class="fas fa-search-plus mr-2"></i>AI Analysis
+                </button>
+                <button id="clear-run-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
         </div>
         <div id="run-output-content" class="p-6 font-mono text-sm"></div>
     </div>
@@ -163,6 +168,31 @@ try {
             fetch("{{ url_for('scripts.get_github_script_content') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: scriptPath }) }).then(res => res.json()).then(data => {
                 if (data.error) throw new Error(data.error);
                 return fetch("{{ url_for('scripts.analyze_script') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ script: data.content, ai_provider: aiProviderSelect.value }) });
+            }).then(res => res.json()).then(data => {
+                content.innerHTML = '';
+                if (data.error) content.innerHTML = `<pre class="text-red-500">${data.error}</pre>`;
+                else content.appendChild(renderCollapsible(data.output));
+            }).catch(err => content.innerHTML = `<pre class="text-red-500">${err.message}</pre>`);
+        }
+        
+        if (button.id === 'analyze-output-btn') {
+            const outputContent = runOutputContent.innerText;
+            if (!outputContent) return alert('No execution output to analyze.');
+
+            const content = document.getElementById('output-modal-content');
+            document.getElementById('output-modal-title').textContent = `Execution Output Analysis`;
+            content.innerHTML = '<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...</div>';
+            showModal(outputModal);
+
+            fetch("{{ url_for('main.analyze_output') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    script: currentScriptContent,
+                    output: outputContent,
+                    error: '', // Assume success for simplicity, can be enhanced
+                    ai_provider: aiProviderSelect.value
+                })
             }).then(res => res.json()).then(data => {
                 content.innerHTML = '';
                 if (data.error) content.innerHTML = `<pre class="text-red-500">${data.error}</pre>`;
