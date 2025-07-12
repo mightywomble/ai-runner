@@ -3,9 +3,13 @@ from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
+from flask_login import LoginManager # Import LoginManager
 
 db = SQLAlchemy()
 migrate = Migrate()
+login = LoginManager() # Initialize LoginManager
+login.login_view = 'auth.login' # Set the login view endpoint
+login.login_message = 'Please log in to access this page.' # Optional: message for unauthenticated users
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -16,13 +20,20 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     migrate.init_app(app, db)
+    login.init_app(app) # Initialize Flask-Login with the app
+
+    # User loader function for Flask-Login
+    from app.models import User # Import User model here to avoid circular dependency
+    @login.user_loader
+    def load_user(id):
+        return User.query.get(int(id))
 
     # Register blueprints
     from .main import bp as main_bp
     app.register_blueprint(main_bp)
 
     from .scripts import bp as scripts_bp
-    app.register_blueprint(scripts_bp, url_prefix='/scripts') # Changed this line
+    app.register_blueprint(scripts_bp, url_prefix='/scripts')
 
     from .hosts import bp as hosts_bp
     app.register_blueprint(hosts_bp)
@@ -30,11 +41,20 @@ def create_app(config_class=Config):
     from app.pipelines import bp as pipelines_bp
     app.register_blueprint(pipelines_bp, url_prefix='/pipelines')
 
-    from app.settings import bp as settings_bp
+    from .settings import bp as settings_bp
     app.register_blueprint(settings_bp, url_prefix='/settings')
     
-    from app.users import bp as users_bp
+    from .users import bp as users_bp
     app.register_blueprint(users_bp, url_prefix='/users')
+
+    # New: Register the authentication blueprint
+    from .auth import bp as auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+
+    # Register CLI commands
+    from app.cli import register_cli_commands # Import the function
+    register_cli_commands(app) # Call the function to register commands
+
 
     @app.route('/test/')
     def test_page():
