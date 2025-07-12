@@ -141,6 +141,18 @@
         <div id="output-modal-content" class="p-6 overflow-y-auto flex-1 font-mono text-sm"></div>
     </div>
 </div>
+<div id="notes-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-lg border border-base-300">
+        <div class="p-6 border-b border-base-300"><h3 class="text-lg font-semibold text-white">Add Notes</h3></div>
+        <div class="p-6">
+            <textarea id="notes-textarea" rows="5" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 text-white" placeholder="Enter your notes here..."></textarea>
+        </div>
+        <div class="p-6 bg-base-100 border-t border-base-300 flex justify-end space-x-4">
+            <button id="cancel-notes-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
+            <button id="confirm-notes-btn" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">Save Notes</button>
+        </div>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leader-line-new/leader-line.min.js"></script>
@@ -149,8 +161,11 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         let pipeline = { nodes: {}, connections: [] };
         let nodeIdCounter = 0, lines = [], selectedOutput = null, useSudo = false, currentPipelineId = null;
+        let activeNotesNodeId = null;
         const canvas = document.getElementById('pipeline-canvas');
         const yamlOutput = document.getElementById('yaml-output');
+        const notesModal = document.getElementById('notes-modal');
+        const notesTextarea = document.getElementById('notes-textarea');
         const placeholder = document.getElementById('canvas-placeholder');
         const saveModal = document.getElementById('save-pipeline-modal');
         const outputModal = document.getElementById('output-modal');
@@ -177,6 +192,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             Object.values(pipeline.nodes).forEach(node => {
+                if (node.notes) {
+                    node.notes.split('\n').forEach(line => { yaml += `  # ${line}\n`; });
+                }
                 const jobName = node.name.replace(/[.\s/]+/g, '_').toLowerCase() + `_${node.id}`;
                 yaml += `  ${jobName}:\n`;
                 const dependencies = pipeline.connections.filter(c => c.to === node.id).map(c => {
@@ -200,17 +218,40 @@ document.addEventListener('DOMContentLoaded', function() {
             yamlOutput.textContent = yaml;
         }
 
+        function deleteNode(nodeId) {
+            const nodeToRemove = pipeline.nodes[nodeId];
+            if (!nodeToRemove) return;
+            lines = lines.filter(line => {
+                const lineIsConnected = line.start.closest('.pipeline-node')?.id === nodeId || line.end.closest('.pipeline-node')?.id === nodeId;
+                if (lineIsConnected) line.remove();
+                return !lineIsConnected;
+            });
+            pipeline.connections = pipeline.connections.filter(conn => conn.from !== nodeId && conn.to !== nodeId);
+            nodeToRemove.el.remove();
+            delete pipeline.nodes[nodeId];
+            updateYaml();
+        }
+
         function createNode(type, name, x, y, content = '') {
             const nodeId = `node-${nodeIdCounter++}`;
             const nodeEl = document.createElement('div');
             nodeEl.id = nodeId;
-            nodeEl.className = 'pipeline-node absolute bg-base-200 border border-base-300 rounded-md p-3 shadow-lg flex items-center';
+            nodeEl.className = 'pipeline-node absolute bg-base-200 border border-base-300 rounded-md p-3 shadow-lg flex items-center group';
             nodeEl.style.left = `${x}px`;
             nodeEl.style.top = `${y}px`;
-            nodeEl.innerHTML = `<span class="flex-1">${name}</span><div class="connector-out"></div><div class="connector-in"></div>`;
-            canvas.appendChild(nodeEl);
             
-            const nodeData = { id: nodeId, name, type, el: nodeEl, content };
+            nodeEl.innerHTML = `
+                <span class="flex-1">${name}</span>
+                <div class="absolute top-0 right-0 -mt-2 -mr-2 opacity-0 group-hover:opacity-100 transition-opacity space-x-1">
+                    <button class="notes-btn w-6 h-6 bg-blue-600 rounded-full text-white text-xs" title="Add Notes"><i class="fas fa-comment-alt"></i></button>
+                    <button class="delete-btn w-6 h-6 bg-red-600 rounded-full text-white text-xs" title="Delete Node"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="connector-out"></div>
+                <div class="connector-in"></div>
+            `;
+
+            canvas.appendChild(nodeEl);
+            const nodeData = { id: nodeId, name, type, el: nodeEl, content, notes: '' };
             pipeline.nodes[nodeId] = nodeData;
             
             if (type === 'script' && !content) {
@@ -224,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             interact(nodeEl).draggable({
-                ignoreFrom: '.connector-out, .connector-in',
+                ignoreFrom: '.connector-out, .connector-in, .notes-btn, .delete-btn',
                 modifiers: [interact.modifiers.restrictRect({ restriction: 'parent', endOnly: true })],
                 listeners: {
                     move(event) {
@@ -236,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-
+        
         interact('.draggable-item').draggable({
             listeners: {
                 start (event) {
@@ -302,18 +343,37 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedOutput = null;
         });
 
+        canvas.addEventListener('click', function(event) {
+            const button = event.target.closest('button');
+            if (!button) return;
+            const nodeEl = button.closest('.pipeline-node');
+            if (!nodeEl) return;
+            if (button.classList.contains('delete-btn')) deleteNode(nodeEl.id);
+            if (button.classList.contains('notes-btn')) {
+                activeNotesNodeId = nodeEl.id;
+                notesTextarea.value = pipeline.nodes[activeNotesNodeId].notes || '';
+                showModal(notesModal);
+            }
+        });
+
+        document.getElementById('confirm-notes-btn').addEventListener('click', () => {
+            if (activeNotesNodeId) {
+                pipeline.nodes[activeNotesNodeId].notes = notesTextarea.value;
+                updateYaml();
+            }
+            hideModal(notesModal);
+        });
+        document.getElementById('cancel-notes-btn').addEventListener('click', () => hideModal(notesModal));
+
         document.getElementById('confirm-save-btn').addEventListener('click', () => {
             const pipelineName = document.getElementById('pipeline-name').value;
             if (!pipelineName) return alert('Please enter a name for the pipeline.');
-            
             const serializableNodes = {};
             for (const nodeId in pipeline.nodes) {
                 const { el, ...rest } = pipeline.nodes[nodeId];
                 serializableNodes[nodeId] = rest;
             }
-            
             const payload = { name: pipelineName, yaml: yamlOutput.textContent, graph: { nodes: serializableNodes, connections: pipeline.connections } };
-            
             fetch("{{ url_for('pipelines.save_pipeline') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
             .then(res => res.json()).then(data => {
                 if (data.success) {
@@ -342,19 +402,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('pipeline-dry-run-btn').addEventListener('click', function() {
             const yaml = yamlOutput.textContent;
             if (yaml.startsWith('# YAML will be')) return alert('Please build a pipeline first.');
-            
             document.getElementById('output-modal-title').textContent = 'Pipeline Dry Run Analysis';
             const content = document.getElementById('output-modal-content');
             content.innerHTML = '<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing pipeline...</div>';
             showModal(outputModal);
-
-            fetch("{{ url_for('pipelines.dry_run_yaml') }}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ yaml: yaml, ai_provider: document.getElementById('ai-provider').value })
-            })
-            .then(res => res.json())
-            .then(data => {
+            fetch("{{ url_for('pipelines.dry_run_yaml') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ yaml: yaml, ai_provider: document.getElementById('ai-provider').value }) })
+            .then(res => res.json()).then(data => {
                 if (data.error) content.innerHTML = `<pre class="text-red-500">${data.error}</pre>`;
                 else content.innerHTML = `<pre class="whitespace-pre-wrap">${data.output}</pre>`;
             }).catch(err => content.innerHTML = `<pre class="text-red-500">${err.message}</pre>`);
@@ -362,11 +415,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function handleRun(isSudo) {
             useSudo = isSudo;
-            if (currentPipelineId) {
-                executePipeline(currentPipelineId);
-            } else {
-                showModal(saveModal);
-            }
+            if (currentPipelineId) executePipeline(currentPipelineId);
+            else showModal(saveModal);
         }
 
         document.getElementById('pipeline-run-btn').addEventListener('click', () => handleRun(false));
@@ -381,11 +431,8 @@ document.addEventListener('DOMContentLoaded', function() {
         function executePipeline(pipelineId) {
             runOutputContainer.classList.remove('hidden');
             runOutputContent.innerHTML = '<div class="p-4"><i class="fas fa-spinner fa-spin mr-2"></i>Executing pipeline...</div>';
-            fetch(`{{ url_for('pipelines.run_pipeline', pipeline_id=0) }}`.replace('0', pipelineId), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ use_sudo: useSudo })
-            }).then(res => res.json()).then(data => {
+            fetch(`{{ url_for('pipelines.run_pipeline', pipeline_id=0) }}`.replace('0', pipelineId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ use_sudo: useSudo }) })
+            .then(res => res.json()).then(data => {
                 runOutputContent.innerHTML = '';
                 if (data.error) {
                     runOutputContent.innerHTML = `<pre class="text-red-500">${data.error}</pre>`;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} - AI Ops Runner</title>
+    <title>{{ title }} - Fysseree AIOps</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -27,9 +27,14 @@
     <div class="flex h-full">
         <!-- Sidebar -->
         <aside class="w-64 flex-shrink-0 bg-base-200 border-r border-base-300 flex flex-col">
-            <div class="h-16 flex items-center px-6 border-b border-base-300">
-                <i class="fas fa-robot text-2xl text-accent"></i>
-                <span class="ml-3 text-lg font-semibold text-white">AI Ops Runner</span>
+            <div class="h-16 flex items-center px-4 border-b border-base-300">
+                <!-- New SVG Logo -->
+                <svg class="h-8 w-8 text-accent" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 2C23.49 2 2 23.49 2 50s21.49 48 48 48 48-21.49 48-48S76.51 2 50 2zm0 8c22.091 0 40 17.909 40 40s-17.909 40-40 40S10 72.091 10 50 27.909 10 50 10z" fill="currentColor"/>
+                    <path d="M50 25c-13.807 0-25 11.193-25 25s11.193 25 25 25 25-11.193 25-25S63.807 25 50 25zm-5 5h10v5H45v-5zm15 10v10H40v-10h20zM45 60h10v5H45v-5z" fill="currentColor"/>
+                    <path d="M50 15c-19.33 0-35 15.67-35 35s15.67 35 35 35 35-15.67 35-35S69.33 15 50 15zm0 60c-13.807 0-25-11.193-25-25s11.193-25 25-25 25 11.193 25 25-11.193 25-25 25z" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 5"/>
+                </svg>
+                <span class="ml-2 text-lg font-semibold text-white">Fysseree AIOps</span>
             </div>
             <nav class="flex-1 px-4 py-4 space-y-2">
                 <a href="{{ url_for('main.index') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 {{ 'bg-accent text-white' if 'index' in request.endpoint else '' }}">
@@ -103,7 +108,6 @@
     </div>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
-        // This script is in base.html as it's relevant to the header on all pages
         document.addEventListener('DOMContentLoaded', function() {
             try {
                 const testAiBtn = document.getElementById('test-ai-btn');
@@ -112,37 +116,17 @@
 
                 testAiBtn.addEventListener('click', function() {
                     const provider = aiProviderSelect.value;
-                    
                     testAiIcon.className = 'fas fa-spinner fa-spin text-gray-400';
-
-                    fetch("{{ url_for('main.test_ai_provider') }}", {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ provider: provider })
-                    })
+                    fetch("{{ url_for('main.test_ai_provider') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: provider }) })
                     .then(res => res.json())
                     .then(data => {
-                        if (data.success) {
-                            testAiIcon.className = 'fas fa-check-circle text-green-500';
-                        } else {
-                            testAiIcon.className = 'fas fa-times-circle text-red-500';
-                            alert(`Test failed for ${provider}: ${data.error}`);
-                        }
+                        if (data.success) { testAiIcon.className = 'fas fa-check-circle text-green-500'; } 
+                        else { testAiIcon.className = 'fas fa-times-circle text-red-500'; alert(`Test failed for ${provider}: ${data.error}`); }
                     })
-                    .catch(err => {
-                        testAiIcon.className = 'fas fa-exclamation-triangle text-yellow-500';
-                        alert('An error occurred during the test.');
-                        console.error('AI Test Error:', err);
-                    })
-                    .finally(() => {
-                        setTimeout(() => {
-                            testAiIcon.className = 'fas fa-plug text-gray-400';
-                        }, 5000);
-                    });
+                    .catch(err => { testAiIcon.className = 'fas fa-exclamation-triangle text-yellow-500'; alert('An error occurred during the test.'); console.error('AI Test Error:', err); })
+                    .finally(() => { setTimeout(() => { testAiIcon.className = 'fas fa-plug text-gray-400'; }, 5000); });
                 });
-            } catch (e) {
-                console.error("Error setting up AI test button:", e);
-            }
+            } catch (e) { console.error("Error setting up AI test button:", e); }
         });
     </script>
 </body>
