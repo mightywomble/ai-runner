@@ -7,38 +7,12 @@ from github import Github, UnknownObjectException
 import base64
 import google.generativeai as genai
 import openai
-
-def get_script_icon(filename):
-    if filename.endswith(('.sh', '.bash')):
-        return 'fas fa-terminal'
-    elif filename.endswith('.py'):
-        return 'fab fa-python'
-    elif filename.endswith(('.yml', '.yaml')):
-        return 'fas fa-cogs'
-    else:
-        return 'fas fa-scroll'
-
-def get_repo_scripts_recursive(repo, path=""):
-    """Recursively fetches all script files from a GitHub repository."""
-    scripts = []
-    try:
-        contents = repo.get_contents(path)
-        for content_file in contents:
-            if content_file.type == 'dir':
-                scripts.extend(get_repo_scripts_recursive(repo, content_file.path))
-            else:
-                scripts.append({
-                    'name': content_file.name,
-                    'path': content_file.path,
-                    'icon': get_script_icon(content_file.name)
-                })
-    except Exception as e:
-        print(f"Could not get contents of {path}: {e}")
-    return scripts
+from app.utils import get_repo_scripts_recursive, get_script_icon
 
 @bp.route('/')
 def scripts_list():
     local_scripts = Script.query.order_by(Script.name).all()
+    
     github_scripts = []
     app_config = Config.get_app_config() or {}
     github_token = app_config.get('github_api_key')
@@ -103,6 +77,7 @@ def push_to_github(script_id):
     try:
         g = Github(github_token)
         repo = g.get_repo(repo_name)
+        
         dir_name = script.script_type.lower().replace(" ", "-")
         file_path = f"{dir_name}/{script.name}"
         commit_message = f"Add/update script: {script.name}"
@@ -124,6 +99,7 @@ def push_to_github(script_id):
 def get_github_script_content():
     data = request.get_json()
     path = data.get('path')
+    
     app_config = Config.get_app_config() or {}
     github_token = app_config.get('github_api_key')
     repo_name = app_config.get('github_repo')

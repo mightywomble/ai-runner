@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex h-[80vh] bg-gray-900 text-white">
+    <!-- Left Panel: Components -->
+    <div id="components-panel" class="w-1/4 bg-base-200 p-4 overflow-y-auto border-r border-base-300">
+        <h2 class="text-lg font-bold mb-4">Components</h2>
+        
+        <!-- Hosts Section -->
+        <div>
+            <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                <span><i class="fas fa-server fa-fw mr-2"></i>Hosts</span>
+                <i class="fas fa-chevron-up transform transition-transform"></i>
+            </button>
+            <div class="collapsible-content pl-4 pt-2 space-y-2">
+                {% for host in hosts %}
+                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="host" data-name="{{ host.name }}">
+                        <i class="fas fa-server fa-fw mr-2"></i>{{ host.name }}
+                    </div>
+                {% else %}
+                    <p class="text-xs text-gray-500">No hosts found.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Local Scripts Section -->
+        <div class="mt-4">
+            <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                <span><i class="fas fa-scroll fa-fw mr-2 text-yellow-400"></i>Local Scripts</span>
+                <i class="fas fa-chevron-up transform transition-transform"></i>
+            </button>
+            <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
+                {% for script in local_scripts %}
+                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="script" data-name="{{ script.name }}">
+                        <i class="fas fa-scroll fa-fw mr-2"></i>{{ script.name }}
+                    </div>
+                {% else %}
+                    <p class="text-xs text-gray-500">No local scripts.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- GitHub Scripts Section -->
+        <div class="mt-4">
+            <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                <span><i class="fab fa-github fa-fw mr-2 text-blue-400"></i>GitHub Scripts</span>
+                <i class="fas fa-chevron-up transform transition-transform"></i>
+            </button>
+            <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
+                 {% for script in github_scripts %}
+                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 truncate draggable-item" title="{{ script.path }}" data-type="script" data-name="{{ script.path }}">
+                        <i class="{{ script.icon }} fa-fw mr-2"></i>{{ script.name }}
+                    </div>
+                {% else %}
+                    <p class="text-xs text-gray-500">No GitHub scripts.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Actions Section -->
+        <div class="mt-4">
+            <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                <span><i class="fas fa-bolt fa-fw mr-2"></i>Actions</span>
+                <i class="fas fa-chevron-up transform transition-transform"></i>
+            </button>
+            <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
+                <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="AI Analysis">
+                    <i class="fas fa-robot fa-fw mr-2 text-purple-400"></i>AI Analysis
+                </div>
+                {% if notifications.discord %}
+                <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="Notify Discord">
+                    <i class="fab fa-discord fa-fw mr-2 text-indigo-400"></i>Notify Discord
+                </div>
+                {% endif %}
+                 {% if notifications.email %}
+                <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="Send Email">
+                    <i class="fas fa-envelope fa-fw mr-2 text-teal-400"></i>Send Email
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Middle Panel: Canvas -->
+    <div id="pipeline-canvas" class="flex-1 bg-base-100 p-4 relative">
+        <div id="canvas-placeholder" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-600 text-center pointer-events-none">
+            <i class="fas fa-mouse-pointer text-4xl mb-2"></i>
+            <p>Drag and drop components here</p>
+        </div>
+    </div>
+
+    <!-- Right Panel: YAML Output & Controls -->
+    <div class="w-1/3 bg-base-200 p-4 flex flex-col border-l border-base-300">
+        <h2 class="text-lg font-bold mb-4">Pipeline YAML</h2>
+        <div class="flex-1 bg-base-100 rounded-md p-2 font-mono text-xs overflow-auto border border-base-300">
+            <pre><code id="yaml-output"># YAML will be generated here...</code></pre>
+        </div>
+        <div class="mt-4 flex space-x-2">
+            <button class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 flex-1"><i class="fas fa-play mr-2"></i>Dry Run</button>
+            <button class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 flex-1"><i class="fas fa-rocket mr-2"></i>Run Pipeline</button>
+        </div>
+    </div>
+</div>
+
+<!-- JS Libraries for Drag & Drop and Lines -->
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leader-line-new/leader-line.min.js"></script>
+
+<script>
+try {
+    // --- Collapsible Sidebar Sections ---
+    document.querySelectorAll('.collapsible-trigger').forEach(button => {
+        button.addEventListener('click', () => {
+            const content = button.nextElementSibling;
+            const icon = button.querySelector('i.fa-chevron-up');
+            content.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        });
+    });
+    document.querySelector('.collapsible-trigger').click();
+
+    // --- Pipeline State ---
+    const pipeline = {
+        nodes: {},
+        connections: []
+    };
+    let nodeIdCounter = 0;
+    let lines = [];
+    let selectedOutput = null;
+
+    const canvas = document.getElementById('pipeline-canvas');
+    const yamlOutput = document.getElementById('yaml-output');
+    const placeholder = document.getElementById('canvas-placeholder');
+
+    // --- YAML Generation ---
+    function updateYaml() {
+        let yaml = 'name: New Pipeline\n\n';
+        yaml += 'on: [workflow_dispatch]\n\n';
+        yaml += 'jobs:\n';
+
+        if (Object.keys(pipeline.nodes).length === 0) {
+            yamlOutput.textContent = '# YAML will be generated here...';
+            return;
+        }
+
+        Object.values(pipeline.nodes).forEach(node => {
+            const jobName = node.name.replace(/[.\s/]+/g, '_').toLowerCase() + `_${node.id}`;
+            yaml += `  ${jobName}:\n`;
+            
+            const dependencies = pipeline.connections
+                .filter(conn => conn.to === node.id)
+                .map(conn => {
+                    const fromNode = pipeline.nodes[conn.from];
+                    return fromNode.name.replace(/[.\s/]+/g, '_').toLowerCase() + `_${fromNode.id}`;
+                });
+
+            if (dependencies.length > 0) {
+                yaml += `    needs: [${dependencies.join(', ')}]\n`;
+            }
+
+            yaml += `    runs-on: ubuntu-latest\n`;
+            yaml += `    steps:\n`;
+            yaml += `      - name: ${node.name}\n`;
+            yaml += `        run: echo "Executing ${node.type}: ${node.name}"\n`;
+        });
+        
+        yamlOutput.textContent = yaml;
+    }
+
+    // --- Drag and Drop Logic ---
+    interact('.draggable-item').draggable({
+        listeners: {
+            start (event) {
+                const original = event.target;
+                const clone = original.cloneNode(true);
+                clone.classList.add('dragging-clone');
+                document.body.appendChild(clone);
+                event.interaction.clone = clone;
+                const originalRect = original.getBoundingClientRect();
+                clone.style.position = 'absolute';
+                clone.style.left = `${originalRect.left}px`;
+                clone.style.top = `${originalRect.top}px`;
+                clone.style.width = `${originalRect.width}px`;
+            },
+            move (event) {
+                const clone = event.interaction.clone;
+                const x = (parseFloat(clone.getAttribute('data-x')) || 0) + event.dx;
+                const y = (parseFloat(clone.getAttribute('data-y')) || 0) + event.dy;
+                clone.style.transform = `translate(${x}px, ${y}px)`;
+                clone.setAttribute('data-x', x);
+                clone.setAttribute('data-y', y);
+            },
+            end (event) {
+                const clone = event.interaction.clone;
+                if (clone) clone.remove();
+            }
+        }
+    });
+
+    interact('#pipeline-canvas').dropzone({
+        accept: '.draggable-item',
+        ondrop: function (event) {
+            const originalElement = event.relatedTarget;
+            placeholder.classList.add('hidden');
+            const canvasRect = canvas.getBoundingClientRect();
+            const x = event.dragEvent.clientX - canvasRect.left;
+            const y = event.dragEvent.clientY - canvasRect.top;
+            createNode(originalElement.dataset.type, originalElement.dataset.name, x, y);
+        }
+    });
+    
+    function createNode(type, name, x, y) {
+        const nodeId = `node-${nodeIdCounter++}`;
+        const nodeEl = document.createElement('div');
+        nodeEl.id = nodeId;
+        nodeEl.className = 'pipeline-node absolute bg-base-200 border border-base-300 rounded-md p-3 shadow-lg flex items-center';
+        nodeEl.style.left = `${x}px`;
+        nodeEl.style.top = `${y}px`;
+        
+        nodeEl.innerHTML = `
+            <span class="flex-1">${name}</span>
+            <div class="connector-out absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-accent rounded-full cursor-pointer"></div>
+            <div class="connector-in absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-gray-400 rounded-full cursor-pointer"></div>
+        `;
+
+        canvas.appendChild(nodeEl);
+        pipeline.nodes[nodeId] = { id: nodeId, name: name, type: type, el: nodeEl };
+        updateYaml();
+
+        interact(nodeEl).draggable({
+            ignoreFrom: '.connector-out, .connector-in',
+            modifiers: [
+                interact.modifiers.restrictRect({
+                    restriction: 'parent',
+                    endOnly: true
+                })
+            ],
+            listeners: {
+                move(event) {
+                    const target = event.target;
+                    target.style.left = `${parseFloat(target.style.left) + event.dx}px`;
+                    target.style.top = `${parseFloat(target.style.top) + event.dy}px`;
+                    lines.forEach(line => line.position());
+                }
+            }
+        });
+    }
+
+    // --- Connection Logic ---
+    canvas.addEventListener('mousedown', function(event) {
+        if (event.target.classList.contains('connector-out')) {
+            event.stopPropagation();
+            selectedOutput = event.target; // Select the connector dot itself
+            selectedOutput.parentElement.classList.add('connecting');
+        }
+    });
+
+    canvas.addEventListener('mouseup', function(event) {
+        if (selectedOutput && event.target.classList.contains('connector-in')) {
+            const inputConnector = event.target;
+            const outputNode = selectedOutput.parentElement;
+            const inputNode = inputConnector.parentElement;
+
+            if (outputNode.id !== inputNode.id) {
+                // Draw the line between the actual connector elements
+                const line = new LeaderLine(selectedOutput, inputConnector, {
+                    color: '#2f81f7',
+                    size: 2,
+                    path: 'fluid',
+                    endPlug: 'arrow1'
+                });
+                lines.push(line);
+                // Store the connection using the parent node IDs
+                pipeline.connections.push({ from: outputNode.id, to: inputNode.id });
+                updateYaml();
+            }
+        }
+        if(selectedOutput) {
+            selectedOutput.parentElement.classList.remove('connecting');
+        }
+        selectedOutput = null;
+    });
+
+} catch (e) {
+    console.error("Pipeline Builder Error:", e);
+    alert("An error occurred while initializing the pipeline builder. Check the console for details.");
+}
+</script>
+<style>
+    .pipeline-node .connector-out, .pipeline-node .connector-in {
+        border: 2px solid #161b22;
+        transition: transform 0.2s ease-in-out;
+    }
+    .pipeline-node:hover .connector-out, .pipeline-node:hover .connector-in {
+        transform: scale(1.5);
+    }
+    .pipeline-node.connecting .connector-out {
+        animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(47, 129, 247, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(47, 129, 247, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(47, 129, 247, 0); }
+    }
+    .dragging-clone {
+        z-index: 1000;
+        opacity: 0.7;
+        pointer-events: none;
+    }
+    #pipeline-canvas {
+        overflow: visible;
+    }
+</style>
+{% endblock %}
