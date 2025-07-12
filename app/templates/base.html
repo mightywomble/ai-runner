@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} - Fysseree AIOps</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script>
         // Pass config to Tailwind
@@ -76,7 +76,7 @@
                     <i class="fas fa-cogs fa-fw mr-3"></i>
                     <span class="sidebar-text">Pipelines</span>
                 </a>
-                 <a href="{{ url_for('hosts.hosts') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'hosts' in request.endpoint else '' }}">
+                 <a href="{{ url_for('hosts.hosts_page') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'hosts' in request.endpoint else '' }}">
                     <i class="fas fa-server fa-fw mr-3"></i>
                     <span class="sidebar-text">Hosts</span>
                 </a>
@@ -90,7 +90,7 @@
                     <i class="fas fa-cog fa-fw mr-3"></i>
                     <span class="sidebar-text">Settings</span>
                 </a>
-                 <a href="{{ url_for('users.user_management') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'users' in request.endpoint else '' }}">
+                 <a href="#" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'users' in request.endpoint else '' }}">
                     <i class="fas fa-users-cog fa-fw mr-3"></i>
                     <span class="sidebar-text">Users</span>
                 </a>

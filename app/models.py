@@ -1,36 +1,43 @@
-from app import db
-import datetime
+from . import db
+from datetime import datetime
+
+class Group(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    hosts = db.relationship('Host', backref='group', lazy=True)
+
+    def __repr__(self):
+        return f"Group('{self.name}')"
 
 class Host(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), index=True, unique=True, nullable=False)
-    ip_address = db.Column(db.String(64), index=True, unique=True, nullable=False)
-    os_type = db.Column(db.String(32), nullable=False)
-    ssh_user = db.Column(db.String(64), nullable=False)
-    location = db.Column(db.String(128), nullable=True)
-    distro = db.Column(db.String(64), nullable=True)
-    description = db.Column(db.Text, nullable=True)
+    name = db.Column(db.String(100), nullable=False)
+    ip_address = db.Column(db.String(100), nullable=False)
+    os_type = db.Column(db.String(50), nullable=False)
+    distro = db.Column(db.String(50))
+    ssh_user = db.Column(db.String(100), nullable=False)
+    location = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=True)
 
     def __repr__(self):
-        return f'<Host {self.name}>'
+        return f"Host('{self.name}', '{self.ip_address}')"
 
 class Script(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(128), nullable=False)
-    description = db.Column(db.Text, nullable=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
     content = db.Column(db.Text, nullable=False)
-    script_type = db.Column(db.String(64), nullable=False)
-
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
     def __repr__(self):
         return f'<Script {self.name}>'
 
 class Pipeline(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(128), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    yaml_content = db.Column(db.Text, nullable=False)
-    # Store the graph structure for the execution engine
-    graph_json = db.Column(db.Text, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    definition = db.Column(db.Text) # Storing the pipeline definition as YAML or JSON
 
     def __repr__(self):
-        return f'<Pipeline {self.name}>'
+        return f"Pipeline('{self.name}')"

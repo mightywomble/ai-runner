@@ -1,115 +1,337 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Add Host Card -->
-    <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
-        <div class="p-6 border-b border-base-300">
-            <h2 class="text-lg font-semibold text-white">Add New Host</h2>
-            <p class="text-sm text-gray-400 mt-1">Add a new server to manage. The test button will verify SSH access.</p>
+<div class="flex flex-col md:flex-row gap-6">
+
+    <!-- Left Panel: Host List Card (Wider) -->
+    <div class="w-full md:w-2/3">
+        <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg h-full">
+            <div class="p-6 border-b border-base-300">
+                <h2 class="text-lg font-semibold text-white">Managed Hosts</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <!-- Loop through groups and create an accordion for each -->
+                <!-- Groups Section -->
+                {% for group in groups %}
+                <div class="bg-base-200 rounded-lg mb-4">
+                    <!-- Group Header -->
+                    <div class="flex items-center justify-between p-4 cursor-pointer group-header" data-group-id="{{ group.id }}">
+                        <div class="flex items-center space-x-3">
+                            <button class="expand-btn text-lg">
+                                <i class="fas fa-chevron-right transition-transform duration-200"></i>
+                            </button>
+                            <h3 class="text-lg font-semibold">{{ group.name }}</h3>
+                            <span class="badge badge-primary">{{ hosts_by_group[group.id]|length }} hosts</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <form method="POST" action="{{ url_for('hosts.delete_group', group_id=group.id) }}" class="inline" onsubmit="return confirm('Are you sure you want to delete this group? All hosts will become ungrouped.');">
+                                <button type="submit" class="btn btn-sm btn-error" title="Delete Group">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Group Content (initially hidden) -->
+                    <div class="group-content hidden">
+                        <div class="px-4 pb-4">
+                            {% if hosts_by_group[group.id] %}
+                                <!-- Host List Table -->
+                                <div class="overflow-x-auto">
+                                    <table class="table table-zebra w-full">
+                                        <thead>
+                                            <tr>
+                                                <th class="w-12"></th> <!-- Logo column -->
+                                                <th>Name</th>
+                                                <th>IP Address</th>
+                                                <th>OS</th>
+                                                <th>User</th>
+                                                <th>Location</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for host in hosts_by_group[group.id] %}
+                                            <tr class="hover">
+                                                <td>
+                                                    <!-- Distro Logo/Icon -->
+                                                    {% if host.os_type == 'Linux' and host.distro %}
+                                                        <div class="distro-icon {{ host.distro|distro_class }}">
+                                                            <i class="{{ host.distro|distro_icon }}"></i>
+                                                        </div>
+                                                    {% elif host.os_type == 'Windows' %}
+                                                        <div class="distro-icon" style="background-color: #0078D4; color: white;">
+                                                            <i class="fab fa-windows"></i>
+                                                        </div>
+                                                    {% elif host.os_type == 'macOS' %}
+                                                        <div class="distro-icon" style="background-color: #000000; color: white;">
+                                                            <i class="fab fa-apple"></i>
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="distro-icon distro-other">
+                                                            <i class="fas fa-server"></i>
+                                                        </div>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="font-bold">{{ host.name }}</div>
+                                                    {% if host.description %}
+                                                    <div class="text-sm text-gray-500">{{ host.description }}</div>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ host.ip_address }}</td>
+                                                <td>
+                                                    <div>{{ host.os_type }}</div>
+                                                    {% if host.distro %}
+                                                    <div class="text-sm text-gray-500">{{ host.distro }}</div>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ host.ssh_user }}</td>
+                                                <td>{{ host.location or '-' }}</td>
+                                                <td>
+                                                    <div class="flex items-center space-x-1">
+                                                        <button class="row-test-btn btn btn-xs btn-primary" 
+                                                                data-ip="{{ host.ip_address }}" 
+                                                                data-user="{{ host.ssh_user }}" 
+                                                                title="Test Connection">
+                                                            <i class="fas fa-network-wired"></i>
+                                                        </button>
+                                                        <a href="{{ url_for('hosts.edit_host', host_id=host.id) }}" 
+                                                           class="btn btn-xs btn-secondary" title="Edit Host">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <form method="POST" action="{{ url_for('hosts.delete_host', host_id=host.id) }}" 
+                                                              class="inline" onsubmit="return confirm('Are you sure you want to delete this host?');">
+                                                            <button type="submit" class="btn btn-xs btn-error" title="Delete Host">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-server text-3xl mb-2"></i>
+                                    <p>No hosts in this group</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Accordion for Ungrouped Hosts -->
+                {% if ungrouped_hosts %}
+                <div class="bg-base-200 rounded-lg mb-4">
+                    <div class="flex items-center justify-between p-4 cursor-pointer group-header" data-group-id="ungrouped">
+                        <div class="flex items-center space-x-3">
+                            <button class="expand-btn text-lg">
+                                <i class="fas fa-chevron-right transition-transform duration-200"></i>
+                            </button>
+                            <h3 class="text-lg font-semibold">Ungrouped Hosts</h3>
+                            <span class="badge badge-secondary">{{ ungrouped_hosts|length }} hosts</span>
+                        </div>
+                    </div>
+                    
+                    <div class="group-content hidden">
+                        <div class="px-4 pb-4">
+                            <div class="overflow-x-auto">
+                                <table class="table table-zebra w-full">
+                                    <thead>
+                                        <tr>
+                                            <th class="w-12"></th> <!-- Logo column -->
+                                            <th>Name</th>
+                                            <th>IP Address</th>
+                                            <th>OS</th>
+                                            <th>User</th>
+                                            <th>Location</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for host in ungrouped_hosts %}
+                                        <tr class="hover">
+                                            <td>
+                                                <!-- Distro Logo/Icon -->
+                                                {% if host.os_type == 'Linux' and host.distro %}
+                                                    <div class="distro-icon {{ host.distro|distro_class }}">
+                                                        <i class="{{ host.distro|distro_icon }}"></i>
+                                                    </div>
+                                                {% elif host.os_type == 'Windows' %}
+                                                    <div class="distro-icon" style="background-color: #0078D4; color: white;">
+                                                        <i class="fab fa-windows"></i>
+                                                    </div>
+                                                {% elif host.os_type == 'macOS' %}
+                                                    <div class="distro-icon" style="background-color: #000000; color: white;">
+                                                        <i class="fab fa-apple"></i>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="distro-icon distro-other">
+                                                        <i class="fas fa-server"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="font-bold">{{ host.name }}</div>
+                                                {% if host.description %}
+                                                <div class="text-sm text-gray-500">{{ host.description }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ host.ip_address }}</td>
+                                            <td>
+                                                <div>{{ host.os_type }}</div>
+                                                {% if host.distro %}
+                                                <div class="text-sm text-gray-500">{{ host.distro }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ host.ssh_user }}</td>
+                                            <td>{{ host.location or '-' }}</td>
+                                            <td>
+                                                <div class="flex items-center space-x-1">
+                                                    <button class="row-test-btn btn btn-xs btn-primary" 
+                                                            data-ip="{{ host.ip_address }}" 
+                                                            data-user="{{ host.ssh_user }}" 
+                                                            title="Test Connection">
+                                                        <i class="fas fa-network-wired"></i>
+                                                    </button>
+                                                    <a href="{{ url_for('hosts.edit_host', host_id=host.id) }}" 
+                                                       class="btn btn-xs btn-secondary" title="Edit Host">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <form method="POST" action="{{ url_for('hosts.delete_host', host_id=host.id) }}" 
+                                                          class="inline" onsubmit="return confirm('Are you sure you want to delete this host?');">
+                                                        <button type="submit" class="btn btn-xs btn-error" title="Delete Host">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                 {% if not groups and not ungrouped_hosts %}
+                    <p class="text-gray-500 text-center py-4">No hosts or groups found. Add a group and a host to get started.</p>
+                {% endif %}
+            </div>
         </div>
-        <form method="POST" action="{{ url_for('hosts.hosts') }}" class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="name" class="block text-sm font-medium text-gray-400 mb-2">Friendly Name</label>
-                    <input type="text" name="name" id="name" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., web-server-01">
-                </div>
-                <div>
-                    <label for="ip_address" class="block text-sm font-medium text-gray-400 mb-2">IP Address or Hostname</label>
-                    <input type="text" name="ip_address" id="ip_address" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., 192.168.1.10">
-                </div>
-                <div>
-                    <label for="os_type" class="block text-sm font-medium text-gray-400 mb-2">Operating System</label>
-                    <select name="os_type" id="os_type" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
-                        <option>Linux</option>
-                        <option>Windows</option>
-                        <option>MacOS</option>
-                    </select>
-                </div>
-                <div id="distro-field" class="">
-                    <label for="distro" class="block text-sm font-medium text-gray-400 mb-2">Linux Distro</label>
-                    <select name="distro" id="distro" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
-                        {% for d in distros %}
-                        <option>{{ d }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div>
-                    <label for="ssh_user" class="block text-sm font-medium text-gray-400 mb-2">SSH User</label>
-                    <input type="text" name="ssh_user" id="ssh_user" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., ubuntu">
-                </div>
-                 <div>
-                    <label for="location" class="block text-sm font-medium text-gray-400 mb-2">Location</label>
-                    <input type="text" name="location" id="location" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., London, UK">
-                </div>
-                <div class="md:col-span-2">
-                    <label for="description" class="block text-sm font-medium text-gray-400 mb-2">Description</label>
-                    <textarea name="description" id="description" rows="3" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., Main production web server"></textarea>
-                </div>
-            </div>
-            <div class="mt-6 flex justify-end space-x-4">
-                <button type="button" id="test-connection-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-all duration-300"><i class="fas fa-network-wired mr-2"></i>Test Connection</button>
-                <button type="submit" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-plus mr-2"></i>Add Host</button>
-            </div>
-        </form>
     </div>
 
-    <!-- Host List Card -->
-    <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
-        <div class="p-6 border-b border-base-300">
-            <h2 class="text-lg font-semibold text-white">Managed Hosts</h2>
+    <!-- Right Panel: Add Host & Group Forms -->
+    <div class="w-full md:w-1/3 flex flex-col gap-6">
+        <!-- Add Group Card -->
+        <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
+            <div class="p-6 border-b border-base-300">
+                <h2 class="text-lg font-semibold text-white">Add New Group</h2>
+            </div>
+            <form method="POST" action="{{ url_for('hosts.add_group') }}" class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label for="group_name" class="block text-sm font-medium text-gray-400 mb-2">Group Name</label>
+                        <input type="text" name="group_name" id="group_name" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., Production Servers">
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <button type="submit" class="w-full bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-plus mr-2"></i>Add Group</button>
+                </div>
+            </form>
         </div>
-        <div class="p-6">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="border-b border-base-300 text-sm text-gray-400">
-                        <th class="py-2">Name</th>
-                        <th>IP Address</th>
-                        <th>OS / Distro</th>
-                        <th>Location</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-base-300">
-                    {% for host in hosts %}
-                    <tr>
-                        <td class="py-3 font-semibold text-white">{{ host.name }}</td>
-                        <td class="font-mono text-sm">{{ host.ip_address }}</td>
-                        <td>
-                            {% if 'linux' in host.os_type.lower() %}
-                                <i class="fab fa-linux text-xl"></i> <span class="ml-2">{{ host.distro or host.os_type }}</span>
-                            {% elif 'windows' in host.os_type.lower() %}
-                                <i class="fab fa-windows text-xl"></i> <span class="ml-2">{{ host.os_type }}</span>
-                            {% elif 'macos' in host.os_type.lower() %}
-                                <i class="fab fa-apple text-xl"></i> <span class="ml-2">{{ host.os_type }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ host.location }}</td>
-                        <td class="flex items-center space-x-3 py-3">
-                            <button class="text-gray-400 hover:text-white transition-all duration-300 row-test-btn" 
-                                    data-ip="{{ host.ip_address }}" 
-                                    data-user="{{ host.ssh_user }}"
-                                    title="Test Connection">
-                                <i class="fas fa-network-wired"></i>
-                            </button>
-                            <a href="{{ url_for('hosts.edit_host', host_id=host.id) }}" class="text-gray-400 hover:text-white" title="Edit Host"><i class="fas fa-edit"></i></a>
-                            <form method="POST" action="{{ url_for('hosts.delete_host', host_id=host.id) }}" onsubmit="return confirm('Are you sure you want to delete this host?');">
-                                <button type="submit" class="text-gray-400 hover:text-red-500" title="Delete Host"><i class="fas fa-trash"></i></button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" class="py-4 text-center text-gray-500">No hosts have been added yet.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <!-- Add Host Card -->
+        <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
+            <div class="p-6 border-b border-base-300">
+                <h2 class="text-lg font-semibold text-white">Add New Host</h2>
+            </div>
+            <!-- THE FIX IS HERE -->
+            <form method="POST" action="{{ url_for('hosts.hosts_page') }}" class="p-6">
+                <div class="space-y-4">
+                    <!-- Group Selection Dropdown -->
+                    <div>
+                        <label for="group_id" class="block text-sm font-medium text-gray-400 mb-2">Group</label>
+                        <select name="group_id" id="group_id" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
+                            <option value="">-- No Group --</option>
+                            {% for group in groups %}
+                            <option value="{{ group.id }}">{{ group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-400 mb-2">Friendly Name</label>
+                        <input type="text" name="name" id="name" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., web-server-01">
+                    </div>
+                    <div>
+                        <label for="ip_address" class="block text-sm font-medium text-gray-400 mb-2">IP Address or Hostname</label>
+                        <input type="text" name="ip_address" id="ip_address" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., 192.168.1.10">
+                    </div>
+                    <div>
+                        <label for="os_type" class="block text-sm font-medium text-gray-400 mb-2">Operating System</label>
+                        <select name="os_type" id="os_type" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
+                            <option>Linux</option>
+                            <option>Windows</option>
+                            <option>MacOS</option>
+                        </select>
+                    </div>
+                    <div id="distro-field">
+                        <label for="distro" class="block text-sm font-medium text-gray-400 mb-2">Linux Distro</label>
+                        <select name="distro" id="distro" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
+                            {% for d in distros %}
+                            <option>{{ d }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="ssh_user" class="block text-sm font-medium text-gray-400 mb-2">SSH User</label>
+                        <input type="text" name="ssh_user" id="ssh_user" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., ubuntu">
+                    </div>
+                    <div>
+                        <label for="location" class="block text-sm font-medium text-gray-400 mb-2">Location</label>
+                        <input type="text" name="location" id="location" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., London, UK">
+                    </div>
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-400 mb-2">Description</label>
+                        <textarea name="description" id="description" rows="3" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., Main production web server"></textarea>
+                    </div>
+                </div>
+                <div class="mt-6 flex flex-col space-y-2">
+                    <button type="button" id="test-connection-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-all duration-300"><i class="fas fa-network-wired mr-2"></i>Test Connection</button>
+                    <button type="submit" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-plus mr-2"></i>Add Host</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
 <script>
+    // Accordion functionality
+    document.querySelectorAll('.accordion-header').forEach(button => {
+        button.addEventListener('click', event => {
+            // Prevent clicks on the delete button from toggling the accordion
+            if (event.target.closest('form')) {
+                return;
+            }
+            const accordionContent = button.nextElementSibling;
+            const chevron = button.querySelector('i.fa-chevron-down');
+            if(chevron) {
+                chevron.classList.toggle('rotate-180');
+            }
+            
+            if (accordionContent.style.maxHeight) {
+                accordionContent.style.maxHeight = null;
+            } else {
+                accordionContent.style.maxHeight = accordionContent.scrollHeight + "px";
+            }
+        });
+    });
+
     // Toggles the visibility of the Distro dropdown based on the selected OS
     function handleOsChange() {
         const osType = document.getElementById('os_type').value;
@@ -165,38 +387,84 @@
         });
     });
 
-    // Handles the test buttons for each row in the host list
+    // Expand/Collapse functionality for groups
+    document.querySelectorAll('.group-header').forEach(header => {
+        header.addEventListener('click', function() {
+            const content = this.nextElementSibling;
+            const expandBtn = this.querySelector('.expand-btn i');
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                expandBtn.classList.add('rotate-90');
+            } else {
+                content.classList.add('hidden');
+                expandBtn.classList.remove('rotate-90');
+            }
+        });
+    });
+
+    // Test connection functionality (updated to work with new structure)
     document.querySelectorAll('.row-test-btn').forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent group toggle
+            
             const btn = this;
+            const original_icon = btn.innerHTML;
+            
             const ip_address = btn.dataset.ip;
             const ssh_user = btn.dataset.user;
-            const original_icon = btn.innerHTML;
-
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
             btn.disabled = true;
-
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
             fetch("{{ url_for('hosts.test_connection') }}", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ip_address: ip_address, ssh_user: ssh_user }),
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON');
+                }
+                
+                return response.json();
+            })
             .then(data => {
                 btn.disabled = false;
                 if (data.success) {
                     btn.innerHTML = '<i class="fas fa-check text-green-500"></i>';
+                    btn.title = data.message || 'Connection successful';
                 } else {
                     btn.innerHTML = '<i class="fas fa-times text-red-500"></i>';
+                    btn.title = data.message || 'Connection failed';
                 }
-                setTimeout(() => { btn.innerHTML = original_icon; }, 3000);
+                setTimeout(() => { 
+                    btn.innerHTML = original_icon; 
+                    btn.title = 'Test Connection';
+                }, 3000);
             })
             .catch(error => {
                 console.error('Error:', error);
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500"></i>';
-                setTimeout(() => { btn.innerHTML = original_icon; }, 3000);
+                btn.title = `Error: ${error.message}`;
+                setTimeout(() => { 
+                    btn.innerHTML = original_icon;
+                    btn.title = 'Test Connection';
+                }, 3000);
             });
+        });
+    });
+
+    // Prevent form submissions from triggering group toggle
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('click', function(e) {
+            e.stopPropagation();
         });
     });
 </script>

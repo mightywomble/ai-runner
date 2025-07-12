@@ -1,13 +1,44 @@
-from flask import render_template, redirect, url_for, flash, jsonify, request
-from . import bp
-from app import db
-from app.models import Script, Host
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from ..models import Script
+from .. import db
 from config import Config
 from github import Github, UnknownObjectException
 import base64
 import google.generativeai as genai
 import openai
 from app.utils import get_repo_scripts_recursive, get_script_icon
+
+bp = Blueprint('scripts', __name__, url_prefix='/scripts')
+
+@bp.route('/save', methods=['POST'])
+def save_script():
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        name = data.get('name')
+        content = data.get('content')
+        
+        if not name or not content:
+            return jsonify({'success': False, 'error': 'Name and content are required'}), 400
+        
+        # Check if script with this name already exists
+        existing_script = Script.query.filter_by(name=name).first()
+        if existing_script:
+            return jsonify({'success': False, 'error': 'Script with this name already exists'}), 409
+        
+        # Create new script
+        script = Script(name=name, content=content)
+        db.session.add(script)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': f'Script "{name}" saved successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @bp.route('/')
 def scripts_list():
