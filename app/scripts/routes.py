@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from . import bp # Import bp from app/scripts/__init__.py
 from ..models import Script
 from .. import db
 from config import Config
@@ -7,8 +8,6 @@ import base64
 import google.generativeai as genai
 import openai
 from app.utils import get_repo_scripts_recursive, get_script_icon
-
-bp = Blueprint('scripts', __name__, url_prefix='/scripts')
 
 @bp.route('/save', methods=['POST'])
 def save_script():
@@ -20,6 +19,7 @@ def save_script():
         
         name = data.get('name')
         content = data.get('content')
+        script_type = data.get('script_type', 'Bash Script') # Get script_type, default to 'Bash Script'
         
         if not name or not content:
             return jsonify({'success': False, 'error': 'Name and content are required'}), 400
@@ -27,14 +27,18 @@ def save_script():
         # Check if script with this name already exists
         existing_script = Script.query.filter_by(name=name).first()
         if existing_script:
-            return jsonify({'success': False, 'error': 'Script with this name already exists'}), 409
+            # If exists, update it (including script_type)
+            existing_script.content = content
+            existing_script.script_type = script_type
+            message = f'Script "{name}" updated successfully.'
+        else:
+            # Create new script
+            script = Script(name=name, content=content, script_type=script_type) # Pass script_type
+            db.session.add(script)
+            message = f'Script "{name}" saved successfully.'
         
-        # Create new script
-        script = Script(name=name, content=content)
-        db.session.add(script)
         db.session.commit()
-        
-        return jsonify({'success': True, 'message': f'Script "{name}" saved successfully'})
+        return jsonify({'success': True, 'message': message})
         
     except Exception as e:
         db.session.rollback()
@@ -71,6 +75,7 @@ def edit_script(script_id):
         script_to_edit.name = request.form['name']
         script_to_edit.content = request.form['content']
         script_to_edit.description = request.form.get('description')
+        script_to_edit.script_type = request.form.get('script_type', 'Bash Script') # Get script_type from form
         try:
             db.session.commit()
             flash(f'Script "{script_to_edit.name}" has been updated.', 'success')
@@ -79,7 +84,12 @@ def edit_script(script_id):
             flash(f'Error updating script: {e}', 'error')
         return redirect(url_for('scripts.scripts_list'))
     
-    return render_template('scripts/edit_script.html', title=f'Edit {script_to_edit.name}', script=script_to_edit)
+    # Pass script_type to the template for display
+    return render_template('scripts/edit_script.html', 
+                           title=f'Edit {script_to_edit.name}', 
+                           script=script_to_edit,
+                           script_types=['Bash Command', 'Bash Script', 'Ansible Playbook', 'Python Script']) # Pass available types
+                           
 
 @bp.route('/delete/<int:script_id>', methods=['POST'])
 def delete_script(script_id):
@@ -109,8 +119,27 @@ def push_to_github(script_id):
         g = Github(github_token)
         repo = g.get_repo(repo_name)
         
-        dir_name = script.script_type.lower().replace(" ", "-")
-        file_path = f"{dir_name}/{script.name}"
+        # Determine directory based on script_type
+        # Convert script_type to a suitable directory name (e.g., "Bash Script" -> "bash-scripts")
+        dir_name_map = {
+            'Bash Command': 'bash-commands',
+            'Bash Script': 'bash-scripts',
+            'Ansible Playbook': 'ansible-playbooks',
+            'Python Script': 'python-scripts'
+        }
+        # Use .get() with a default in case a script_type isn't mapped
+        dir_name = dir_name_map.get(script.script_type, 'other-scripts') 
+        
+        # Add appropriate file extension based on script_type
+        file_extension_map = {
+            'Bash Command': '.sh',
+            'Bash Script': '.sh',
+            'Ansible Playbook': '.yml',
+            'Python Script': '.py'
+        }
+        file_extension = file_extension_map.get(script.script_type, '')
+
+        file_path = f"{dir_name}/{script.name}{file_extension}" # Use script.name directly
         commit_message = f"Add/update script: {script.name}"
         
         try:
@@ -153,9 +182,6 @@ def analyze_script():
     script = data.get('script')
     ai_provider = data.get('ai_provider')
     if not script or not ai_provider: return jsonify({'error': 'Missing script or AI provider.'}), 400
-    
-    analysis_prompt = f"You are a helpful DevOps assistant. Analyze the following script. Use 'HEADING: ' to mark section titles for 'Summary', 'Dependencies', 'Expected Outcome', and 'Potential Issues'.\n\nScript:\n```\n{script}\n```"
-    
     app_config = Config.get_app_config() or {}
     try:
         if ai_provider == 'gemini':

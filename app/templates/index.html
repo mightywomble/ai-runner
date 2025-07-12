@@ -167,7 +167,10 @@ try {
 
     dryRunBtn.addEventListener('click', () => {
         const script = document.getElementById('script-output').textContent;
-        const ai_provider = document.getElementById('ai-provider').value;
+        // Assuming 'ai-provider' select element exists, otherwise this will be null
+        const aiProviderElement = document.getElementById('ai-provider');
+        const ai_provider = aiProviderElement ? aiProviderElement.value : 'default_ai_provider'; // Provide a default or handle missing element
+
         if (script.startsWith('# Your generated script')) {
             alert('Please generate a script first.');
             return;
@@ -307,7 +310,9 @@ try {
         if (!target) return;
 
         const script = document.getElementById('script-output').textContent;
-        const ai_provider = document.getElementById('ai-provider').value;
+        // Assuming 'ai-provider' select element exists, otherwise this will be null
+        const aiProviderElement = document.getElementById('ai-provider');
+        const ai_provider = aiProviderElement ? aiProviderElement.value : 'default_ai_provider'; // Provide a default or handle missing element
 
         if (target.classList.contains('analyze-btn')) {
             const output = target.dataset.output;
@@ -338,18 +343,24 @@ try {
             const scriptName = prompt("Enter a name for this script:", "new-script.sh");
             if (scriptName) {
                 const scriptType = document.getElementById('script-type').value;
-                fetch("{{ url_for('main.save_script') }}", {
+                fetch("{{ url_for('scripts.save_script') }}", { // Corrected endpoint here
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ script_content: script, script_name: scriptName, script_type: scriptType }),
+                    body: JSON.stringify({ content: script, name: scriptName, script_type: scriptType }), // Corrected keys here
                 })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
                         alert(data.message);
+                        // Optionally, redirect to the scripts list page to see the newly saved script
+                        window.location.href = "{{ url_for('scripts.scripts_list') }}";
                     } else {
                         alert('Error saving script: ' + data.error);
                     }
+                })
+                .catch(error => {
+                    console.error('Network or parsing error:', error);
+                    alert('An unexpected error occurred while saving the script.');
                 });
             }
         }
@@ -360,7 +371,10 @@ try {
         const btn = this;
         const prompt = document.getElementById('script-prompt').value;
         const script_type = document.getElementById('script-type').value;
-        const ai_provider = document.getElementById('ai-provider').value;
+        // Assuming 'ai-provider' select element exists, otherwise this will be null
+        const aiProviderElement = document.getElementById('ai-provider');
+        const ai_provider = aiProviderElement ? aiProviderElement.value : 'default_ai_provider'; // Provide a default or handle missing element
+
         const output_box = document.getElementById('script-output');
 
         if (!prompt) {
@@ -411,3 +425,4 @@ try {
 }
 </script>
 {% endblock %}
+

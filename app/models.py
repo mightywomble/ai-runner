@@ -27,6 +27,7 @@ class Script(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     content = db.Column(db.Text, nullable=False)
+    script_type = db.Column(db.String(64), default='Bash Script') # Added this line
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

@@ -22,7 +22,7 @@ def create_app(config_class=Config):
     app.register_blueprint(main_bp)
 
     from .scripts import bp as scripts_bp
-    app.register_blueprint(scripts_bp)
+    app.register_blueprint(scripts_bp, url_prefix='/scripts') # Changed this line
 
     from .hosts import bp as hosts_bp
     app.register_blueprint(hosts_bp)

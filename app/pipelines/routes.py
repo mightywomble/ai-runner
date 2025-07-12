@@ -94,21 +94,24 @@ def pipeline_canvas():
 def save_pipeline():
     data = request.get_json()
     name = data.get('name')
-    yaml_content = data.get('yaml')
-    graph = data.get('graph')
-    if not all([name, yaml_content, graph]): return jsonify({'success': False, 'error': 'Missing data.'}), 400
+    # The frontend is sending 'yaml' and 'graph'.
+    # We will store the 'graph' (which is a Python object/dict from JSON.parse on frontend)
+    # into the 'definition' column of the Pipeline model.
+    graph = data.get('graph') 
+
+    if not name or not graph: # Validate essential data
+        return jsonify({'success': False, 'error': 'Missing pipeline name or graph data.'}), 400
     
     # Check if a pipeline with this name already exists
     existing_pipeline = Pipeline.query.filter_by(name=name).first()
     if existing_pipeline:
-        # Update existing pipeline
-        existing_pipeline.yaml_content = yaml_content
-        existing_pipeline.graph_json = json.dumps(graph)
+        # Update existing pipeline: Store the graph JSON in the 'definition' column
+        existing_pipeline.definition = json.dumps(graph) # Corrected: Use 'definition' column
         pipeline_id = existing_pipeline.id
         message = f'Pipeline "{name}" updated.'
     else:
-        # Create new pipeline
-        new_pipeline = Pipeline(name=name, yaml_content=yaml_content, graph_json=json.dumps(graph))
+        # Create new pipeline: Store the graph JSON in the 'definition' column
+        new_pipeline = Pipeline(name=name, definition=json.dumps(graph)) # Corrected: Use 'definition' column
         db.session.add(new_pipeline)
         db.session.flush() # To get the ID before committing
         pipeline_id = new_pipeline.id
@@ -128,7 +131,8 @@ def run_pipeline(pipeline_id):
     ai_provider = data.get('ai_provider', 'gemini')
     
     pipeline = Pipeline.query.get_or_404(pipeline_id)
-    graph = json.loads(pipeline.graph_json)
+    # Load graph from the 'definition' column
+    graph = json.loads(pipeline.definition) # Corrected: Load from 'definition'
     nodes = graph['nodes']
     connections = graph['connections']
 
@@ -271,10 +275,21 @@ def dry_run_yaml():
 @bp.route('/load/<int:pipeline_id>', methods=['GET'])
 def load_pipeline(pipeline_id):
     pipeline = Pipeline.query.get_or_404(pipeline_id)
+    
+    yaml_output = ""
+    # Use pipeline.definition to load the graph data and then dump it as YAML
+    if pipeline.definition:
+        try:
+            definition_data = json.loads(pipeline.definition)
+            yaml_output = yaml.dump(definition_data, default_flow_style=False, sort_keys=False)
+        except json.JSONDecodeError:
+            yaml_output = "# Error: Invalid JSON in definition column, cannot generate YAML."
+
+
     return jsonify({
         'name': pipeline.name,
-        'yaml': pipeline.yaml_content,
-        'graph': json.loads(pipeline.graph_json)
+        'yaml': yaml_output, # Use the generated YAML
+        'graph': json.loads(pipeline.definition) # Corrected: Load graph from 'definition'
     })
 
 @bp.route('/delete/<int:pipeline_id>', methods=['POST'])
@@ -299,6 +314,17 @@ def push_pipeline_to_github(pipeline_id):
         return redirect(url_for('pipelines.pipeline_canvas'))
     
     pipeline = Pipeline.query.get_or_404(pipeline_id)
+    
+    # Generate YAML content from pipeline.definition
+    pipeline_yaml_content = ""
+    if pipeline.definition:
+        try:
+            definition_data = json.loads(pipeline.definition)
+            pipeline_yaml_content = yaml.dump(definition_data, default_flow_style=False, sort_keys=False)
+        except json.JSONDecodeError:
+            flash("Error processing pipeline for GitHub: Invalid JSON in definition column.", "error")
+            return redirect(url_for('pipelines.pipeline_canvas'))
+
     try:
         g = Github(github_token)
         repo = g.get_repo(repo_name)
@@ -307,10 +333,10 @@ def push_pipeline_to_github(pipeline_id):
         
         try:
             contents = repo.get_contents(file_path, ref="dev")
-            repo.update_file(contents.path, commit_message, pipeline.yaml_content, contents.sha, branch="dev")
+            repo.update_file(contents.path, commit_message, pipeline_yaml_content, contents.sha, branch="dev") # Use generated YAML
             flash(f'Pipeline "{pipeline.name}" updated in GitHub dev branch.', 'success')
         except UnknownObjectException:
-            repo.create_file(file_path, commit_message, pipeline.yaml_content, branch="dev")
+            repo.create_file(file_path, commit_message, pipeline_yaml_content, branch="dev") # Use generated YAML
             flash(f'Pipeline "{pipeline.name}" pushed to GitHub dev branch.', 'success')
     except Exception as e:
         flash(f"Failed to push to GitHub: {e}", "error")
@@ -320,17 +346,17 @@ def push_pipeline_to_github(pipeline_id):
 def update_pipeline(pipeline_id):
     data = request.get_json()
     name = data.get('name')
-    yaml_content = data.get('yaml')
-    graph = data.get('graph')
+    # The frontend is sending 'yaml' and 'graph'.
+    # We will store the 'graph' (JSON object) into the 'definition' column.
+    graph = data.get('graph') 
     
-    if not all([name, yaml_content, graph]):
-        return jsonify({'success': False, 'error': 'Missing data.'}), 400
+    if not name or not graph: # Validate essential data
+        return jsonify({'success': False, 'error': 'Missing pipeline name or graph data.'}), 400
     
     try:
         pipeline = Pipeline.query.get_or_404(pipeline_id)
         pipeline.name = name
-        pipeline.yaml_content = yaml_content
-        pipeline.graph_json = json.dumps(graph)
+        pipeline.definition = json.dumps(graph) # Corrected: Use 'definition' column
         
         db.session.commit()
         return jsonify({'success': True, 'message': f'Pipeline "{name}" updated.', 'pipeline_id': pipeline_id})

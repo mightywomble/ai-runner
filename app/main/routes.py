@@ -2,7 +2,7 @@ from flask import render_template, request, jsonify
 from . import bp
 from config import Config
 from app import db
-from app.models import Host, Script
+from app.models import Host, Script # Import Script model
 import google.generativeai as genai
 import openai
 import paramiko
@@ -120,7 +120,7 @@ def analyze_output():
             analysis = response.text
         else:
             api_key = app_config.get('chatgpt_api_key')
-            if not api_key: return jsonify({'error': 'ChatGPT API key is not configured in settings.'}), 500
+            if not api_key: return jsonify({'error': 'ChatGPT API key is not configured.'}), 500
             client = openai.OpenAI(api_key=api_key)
             response = client.chat.completions.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": analysis_prompt}])
             analysis = response.choices[0].message.content
@@ -131,11 +131,15 @@ def analyze_output():
 @bp.route('/save-script', methods=['POST'])
 def save_script():
     data = request.get_json()
-    script_content = data.get('script_content')
-    script_name = data.get('script_name')
-    script_type = data.get('script_type')
-    if not script_content or not script_name or not script_type: return jsonify({'success': False, 'error': 'Missing data.'}), 400
-    new_script = Script(name=script_name, content=script_content, script_type=script_type)
+    script_content = data.get('content') # Changed from 'script_content' to 'content' for consistency with frontend
+    script_name = data.get('name')       # Changed from 'script_name' to 'name' for consistency with frontend
+    script_type = data.get('script_type') # Added this line to retrieve script_type
+    
+    if not script_content or not script_name or not script_type: # Validate script_type
+        return jsonify({'success': False, 'error': 'Missing data (content, name, or script_type).'}), 400
+    
+    # Create new script with script_type
+    new_script = Script(name=script_name, content=script_content, script_type=script_type) 
     db.session.add(new_script)
     try:
         db.session.commit()
