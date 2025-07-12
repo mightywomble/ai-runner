@@ -13,3 +13,38 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #30363d; /* A slightly lighter gray */
 }
+
+/* Pipeline editor styles */
+.btn-warning {
+    --tw-bg-opacity: 1;
+    background-color: rgb(245 158 11 / var(--tw-bg-opacity));
+}
+
+.btn-warning:hover {
+    background-color: rgb(217 119 6);
+}
+
+#pipeline-name:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Pipeline node styles */
+.pipeline-node {
+    cursor: move;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.pipeline-node:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.connector-in, .connector-out {
+    cursor: crosshair;
+}
+
+.connector-in:hover, .connector-out:hover {
+    transform: scale(1.2);
+}
