@@ -64,7 +64,7 @@
                 </button>
             </div>
             <nav class="flex-1 px-4 py-4 space-y-2">
-                <a href="{{ url_for('main.index') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'index' in request.endpoint else '' }}">
+                <a href="{{ url_for('main.index') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'main' in request.endpoint else '' }}">
                     <i class="fas fa-home fa-fw mr-3"></i>
                     <span class="sidebar-text">Home</span>
                 </a>
@@ -86,7 +86,7 @@
                 </a>
             </nav>
             <div class="px-4 py-4 border-t border-base-300">
-                 <a href="{{ url_for('settings.settings') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'settings' in request.endpoint else '' }}"> {# Changed settings_page to settings #}
+                 <a href="{{ url_for('settings.settings_page') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'settings' in request.endpoint else '' }}"> {# Corrected endpoint name #}
                     <i class="fas fa-cog fa-fw mr-3"></i>
                     <span class="sidebar-text">Settings</span>
                 </a>

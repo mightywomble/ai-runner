@@ -80,6 +80,16 @@ The primary purpose of Fysseree AIOps is to empower DevOps engineers, system adm
     
     -   Configure AI API keys (Gemini, ChatGPT) and GitHub repository details.
         
+-   **User Management (RBAC):**
+    
+    -   Local user accounts with username and password.
+        
+    -   Role-Based Access Control (RBAC) with Admin, Engineer, and Viewer groups.
+        
+    -   Ability to add, edit, and delete users and groups.
+        
+    -   Define feature-level permissions (Full Access, View Access, No Access) for each group.
+        
 
 ## Install Instructions
 
@@ -118,17 +128,6 @@ To install and set up Fysseree AIOps, follow these steps:
     
     (You might want to add these to your `.bashrc` or `.zshrc` for persistence, or use a `.env` file with `python-dotenv`).
     
-5.  **Initialize and migrate the database:** Since the database (`app.db`) is managed by Flask-Migrate, you need to set it up.
-    
-    ```
-    flask db init
-    flask db migrate -m "Initial database setup"
-    flask db upgrade
-    
-    ```
-    
-    _If you previously had an `app.db` and deleted it, and are encountering errors with `flask db init`, you might need to delete the `migrations/` folder as well before running `flask db init`._
-    
 
 ## Prerequisites Needed
 
@@ -163,11 +162,42 @@ Before running the application, ensure you have the following:
 
 ## How to Run the App
 
-Once all prerequisites are met and installation steps are completed, you can run the Flask application:
+### Initializing the Application (First Time Setup)
+
+For the first-time setup, or if you've deleted your `app.db` or `migrations` folder, use the `init-app` command. This command will:
+
+-   Initialize the database.
+    
+-   Run all necessary database migrations.
+    
+-   Create the initial `Admin` user and set its password.
+    
+-   Create default `Engineer` and `Viewer` groups.
+    
+
+Run the following command in your terminal from the project's root directory:
+
+```
+flask init-app
+
+```
+
+You will be prompted to set a password for the `admin` user.
+
+Alternatively, you can provide the username and password directly:
+
+```
+flask init-app --admin-username myadmin --admin-password mysecurepassword
+
+```
+
+### Starting the Web Server
+
+Once the application is initialized, you can start the Flask development server:
 
 ```
 flask run --host=0.0.0.0 --port=5055
 
 ```
 
-This will start the Flask development server. You can then access the application in your web browser at `http://localhost:5055` (or the IP address of your server if running remotely, e.g., `http://100.116.246.164:5055`)
+This will start the Flask development server. You can then access the application in your web browser at `http://localhost:5055` (or the IP address of your server if running remotely, e.g., `http://100.116.246.164:5055`). Log in with the admin username and the password you set during initialization.
