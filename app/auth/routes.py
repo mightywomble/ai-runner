@@ -81,7 +81,6 @@ def google_callback():
             
             user = User(username=username, email=email, group=viewer_group)
             # No password for SSO users, but set a placeholder or handle appropriately if your model requires it.
-            # For now, we'll assume password_hash can be null for SSO users or set a dummy value.
             # It's better to ensure your User model allows password_hash to be nullable if using SSO.
             # user.set_password(None) # Or set a random hash if nullable=False
             
