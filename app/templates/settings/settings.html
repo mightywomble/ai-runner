@@ -17,40 +17,51 @@
     {% endwith %}
 
     <div class="bg-base-200 p-6 rounded-lg shadow-lg border border-base-300">
-        <form method="POST" action="{{ url_for('settings.save_settings') }}">
+        <form method="POST" action="{{ url_for('settings.settings_page') }}">
             <h2 class="text-xl font-semibold text-white mb-4">AI Provider Settings</h2>
             <div class="mb-4">
                 <label for="gemini_api_key" class="block text-sm font-medium text-gray-400 mb-2">Gemini API Key</label>
-                <input type="text" id="gemini_api_key" name="gemini_api_key"
-                       value="{{ app_config.get('gemini_api_key', '') }}"
-                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3
-                              focus:outline-none focus:ring-accent focus:border-accent text-white"
-                       placeholder="Enter your Gemini API Key">
+                <div class="relative">
+                    <input type="password" id="gemini_api_key" name="gemini_api_key"
+                           value="{{ app_config.get('gemini_api_key', '') }}"
+                           class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 pr-10 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                           placeholder="Enter your Gemini API Key">
+                    <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white" onclick="toggleVisibility('gemini_api_key', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
             </div>
             <div class="mb-6">
                 <label for="chatgpt_api_key" class="block text-sm font-medium text-gray-400 mb-2">ChatGPT API Key</label>
-                <input type="text" id="chatgpt_api_key" name="chatgpt_api_key"
-                       value="{{ app_config.get('chatgpt_api_key', '') }}"
-                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3
-                              focus:outline-none focus:ring-accent focus:border-accent text-white"
-                       placeholder="Enter your ChatGPT API Key">
+                <div class="relative">
+                    <input type="password" id="chatgpt_api_key" name="chatgpt_api_key"
+                           value="{{ app_config.get('chatgpt_api_key', '') }}"
+                           class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 pr-10 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                           placeholder="Enter your ChatGPT API Key">
+                    <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white" onclick="toggleVisibility('chatgpt_api_key', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
             </div>
 
             <h2 class="text-xl font-semibold text-white mb-4">GitHub Integration Settings</h2>
             <div class="mb-4">
                 <label for="github_api_key" class="block text-sm font-medium text-gray-400 mb-2">GitHub Personal Access Token</label>
-                <input type="text" id="github_api_key" name="github_api_key"
-                       value="{{ app_config.get('github_api_key', '') }}"
-                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3
-                              focus:outline-none focus:ring-accent focus:border-accent text-white"
-                       placeholder="Enter GitHub Personal Access Token">
+                <div class="relative">
+                    <input type="password" id="github_api_key" name="github_api_key"
+                           value="{{ app_config.get('github_api_key', '') }}"
+                           class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 pr-10 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                           placeholder="Enter GitHub Personal Access Token">
+                    <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white" onclick="toggleVisibility('github_api_key', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
             </div>
             <div class="mb-6">
                 <label for="github_repo" class="block text-sm font-medium text-gray-400 mb-2">GitHub Repository (e.g., username/repo_name)</label>
                 <input type="text" id="github_repo" name="github_repo"
                        value="{{ app_config.get('github_repo', '') }}"
-                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3
-                              focus:outline-none focus:ring-accent focus:border-accent text-white"
+                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white"
                        placeholder="e.g., myuser/my-devops-scripts">
             </div>
 
@@ -69,34 +80,40 @@
                 <label for="google_client_id" class="block text-sm font-medium text-gray-400 mb-2">Google Client ID</label>
                 <input type="text" id="google_client_id" name="google_client_id"
                        value="{{ app_config.get('google_client_id', '') }}"
-                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3
-                              focus:outline-none focus:ring-accent focus:border-accent text-white"
+                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white"
                        placeholder="Enter your Google Client ID">
             </div>
             <div class="mb-6">
                 <label for="google_client_secret" class="block text-sm font-medium text-gray-400 mb-2">Google Client Secret</label>
-                <input type="text" id="google_client_secret" name="google_client_secret"
-                       value="{{ app_config.get('google_client_secret', '') }}"
-                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3
-                              focus:outline-none focus:ring-accent focus:border-accent text-white"
-                       placeholder="Enter your Google Client Secret">
+                <div class="relative">
+                    <input type="password" id="google_client_secret" name="google_client_secret"
+                           value="{{ app_config.get('google_client_secret', '') }}"
+                           class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 pr-10 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                           placeholder="Enter your Google Client Secret">
+                    <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white" onclick="toggleVisibility('google_client_secret', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
             </div>
 
             <h2 class="text-xl font-semibold text-white mb-4">Notification Settings</h2>
             <div class="mb-4">
                 <label for="discord_webhook" class="block text-sm font-medium text-gray-400 mb-2">Discord Webhook URL</label>
-                <input type="text" id="discord_webhook" name="discord_webhook"
-                       value="{{ app_config.get('discord_webhook', '') }}"
-                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3
-                              focus:outline-none focus:ring-accent focus:border-accent text-white"
-                       placeholder="Enter Discord Webhook URL">
+                <div class="relative">
+                    <input type="password" id="discord_webhook" name="discord_webhook"
+                           value="{{ app_config.get('discord_webhook', '') }}"
+                           class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 pr-10 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                           placeholder="Enter Discord Webhook URL">
+                    <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white" onclick="toggleVisibility('discord_webhook', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
             </div>
             <div class="mb-6">
                 <label for="email_server" class="block text-sm font-medium text-gray-400 mb-2">Email Server (Placeholder)</label>
                 <input type="text" id="email_server" name="email_server"
                        value="{{ app_config.get('email_server', '') }}"
-                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3
-                              focus:outline-none focus:ring-accent focus:border-accent text-white"
+                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white"
                        placeholder="e.g., smtp.example.com:587">
             </div>
 
@@ -123,4 +140,20 @@
         </form>
     </div>
 </div>
+
+<script>
+function toggleVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    const icon = button.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
 {% endblock %}

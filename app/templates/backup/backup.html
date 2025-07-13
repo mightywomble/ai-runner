@@ -10,7 +10,7 @@
                 <i class="fas fa-cloud-upload-alt mr-3 text-accent"></i>
                 Create Backup
             </h2>
-            <p class="text-gray-400 mt-2">Create a full backup of your hosts, scripts, and pipelines. The backup will be a single <code>.tar.gz</code> file.</p>
+            <p class="text-gray-400 mt-2">Create a full backup of your hosts, scripts, pipelines, and settings. The backup will be a single <code>.tar.gz</code> file.</p>
         </div>
         <div class="p-6">
             <form action="{{ url_for('backup.create_backup') }}" method="post">
@@ -31,13 +31,8 @@
                     <div class="flex items-center space-x-2">
                         <a href="{{ url_for('backup.download_backup', filename=backup_filename) }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md text-sm transition" title="Download">
                             <i class="fas fa-download"></i>
+                            <span class="ml-2">Download</span>
                         </a>
-                        <form action="{{ url_for('backup.push_backup_to_github_route') }}" method="post" class="d-inline">
-                            <input type="hidden" name="backup_filename" value="{{ backup_filename }}">
-                            <button type="submit" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded-md text-sm transition" title="Push to GitHub">
-                                <i class="fab fa-github"></i>
-                            </button>
-                        </form>
                     </div>
                 </div>
             </div>
