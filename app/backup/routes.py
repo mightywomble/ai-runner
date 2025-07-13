@@ -23,7 +23,7 @@ def backup():
 @login_required
 def create_backup():
     """
-    Creates a backup of hosts, scripts, and pipelines.
+    Creates a backup of hosts, scripts, pipelines, and settings.
     """
     try:
         backup_dir = os.path.join(current_app.instance_path, 'backup_temp')
@@ -46,6 +46,12 @@ def create_backup():
         pipelines_data = [{'id': p.id, 'name': p.name, 'description': p.description, 'definition': p.definition} for p in pipelines]
         with open(os.path.join(backup_dir, 'pipelines.json'), 'w') as f:
             json.dump(pipelines_data, f, indent=4)
+        
+        settings = Setting.query.all()
+        settings_data = [{'id': s.id, 'key': s.key, 'value': s.value} for s in settings]
+        with open(os.path.join(backup_dir, 'settings.json'), 'w') as f:
+            json.dump(settings_data, f, indent=4)
+
 
         # Create tar.gz file
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -145,6 +151,10 @@ def preview_backup():
         if os.path.exists(os.path.join(content_dir, 'pipelines.json')):
             with open(os.path.join(content_dir, 'pipelines.json'), 'r') as f:
                 backup_summary['pipelines'] = len(json.load(f))
+
+        if os.path.exists(os.path.join(content_dir, 'settings.json')):
+            with open(os.path.join(content_dir, 'settings.json'), 'r') as f:
+                backup_summary['settings'] = len(json.load(f))
         
         if not backup_summary:
             raise ValueError("The uploaded backup archive is empty or has an invalid structure.")
@@ -192,6 +202,12 @@ def execute_restore():
             with open(os.path.join(content_dir, 'pipelines.json'), 'r') as f:
                 for p_data in json.load(f):
                     p_data.pop('id', None); db.session.add(Pipeline(**p_data))
+        
+        if 'settings' in restore_items:
+            db.session.query(Setting).delete()
+            with open(os.path.join(content_dir, 'settings.json'), 'r') as f:
+                for s_data in json.load(f):
+                    s_data.pop('id', None); db.session.add(Setting(**s_data))
 
         db.session.commit()
         flash(f'Successfully restored: {", ".join(restore_items)}', 'success')
