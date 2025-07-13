@@ -1,6 +1,55 @@
 from github import Github, UnknownObjectException
 import subprocess
 import socket
+import base64
+
+def push_to_github(repo_name, token, file_path, content, commit_message):
+    """
+    Pushes a file to a specified GitHub repository.
+    Creates the file if it doesn't exist, or updates it if it does.
+
+    Args:
+        repo_name (str): The name of the repository (e.g., 'username/repo-name').
+        token (str): A GitHub personal access token with repo permissions.
+        file_path (str): The full path to the file in the repository (e.g., 'backups/backup.tar.gz').
+        content (bytes): The content of the file to be pushed.
+        commit_message (str): The commit message.
+
+    Returns:
+        str: A success or error message.
+    """
+    try:
+        # Authenticate with GitHub
+        g = Github(token)
+        
+        # Get the repository
+        repo = g.get_repo(repo_name)
+        
+        # Check if the file already exists to decide whether to create or update
+        try:
+            # Get the existing file to update it
+            existing_file = repo.get_contents(file_path)
+            # If it exists, update it
+            repo.update_file(
+                path=file_path,
+                message=commit_message,
+                content=content,
+                sha=existing_file.sha
+            )
+            return f"Successfully updated '{file_path}' in '{repo_name}'."
+        except UnknownObjectException:
+            # If the file does not exist, create it
+            repo.create_file(
+                path=file_path,
+                message=commit_message,
+                content=content
+            )
+            return f"Successfully created '{file_path}' in '{repo_name}'."
+            
+    except Exception as e:
+        # Raise the exception to be caught by the route
+        raise Exception(f"GitHub API Error: {e}")
+
 
 def get_script_icon(filename):
     """Returns a Font Awesome icon class based on the script's file extension."""
