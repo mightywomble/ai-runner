@@ -1,9 +1,11 @@
-from flask import render_template, redirect, url_for, flash, request, current_app
+from flask import render_template, redirect, url_for, flash, request, current_app, session # Import session
 from flask_login import current_user, login_user, logout_user, login_required
 from app import db, oauth # Import oauth
 from app.models import User, Group
 from . import bp
 import functools
+import os # Import os for generating nonce
+from config import Config # Import Config to access app settings
 
 # Helper decorator for permission checking
 def permission_required(feature, access_level):
@@ -37,7 +39,14 @@ def login():
         next_page = request.args.get('next')
         return redirect(next_page or url_for('main.index'))
         
-    return render_template('auth/login.html', title='Sign In')
+    # Conditionally pass the current host URL for debugging purposes
+    app_config = Config.get_app_config()
+    debug_enabled = app_config.get('enable_login_debug', False)
+    
+    if debug_enabled:
+        return render_template('auth/login.html', title='Sign In', debug_host_url=request.host_url)
+    else:
+        return render_template('auth/login.html', title='Sign In', debug_host_url=None) # Explicitly pass None
 
 @bp.route('/logout')
 @login_required
@@ -53,15 +62,26 @@ def google_login():
         flash('Google SSO is not configured. Please set Client ID and Secret in settings.', 'error')
         return redirect(url_for('auth.login'))
 
-    # Redirect user to Google for authentication
+    # Generate a nonce and store it in the session
+    nonce = os.urandom(16).hex()
+    session['oauth_nonce'] = nonce
+
+    # Redirect user to Google for authentication, passing the nonce
     redirect_uri = url_for('auth.google_callback', _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
+    return oauth.google.authorize_redirect(redirect_uri, nonce=nonce) # Pass nonce here
 
 @bp.route('/google/callback')
 def google_callback():
     try:
+        # Retrieve the nonce from the session
+        nonce = session.pop('oauth_nonce', None)
+        if not nonce:
+            flash('Google login failed: Missing nonce in session.', 'error')
+            return redirect(url_for('auth.login'))
+
         token = oauth.google.authorize_access_token()
-        userinfo = oauth.google.parse_id_token(token)
+        # Pass the nonce to parse_id_token
+        userinfo = oauth.google.parse_id_token(token, nonce=nonce) 
         
         # Check if userinfo contains email and name
         if 'email' not in userinfo:

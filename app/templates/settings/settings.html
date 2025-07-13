@@ -100,6 +100,16 @@
                        placeholder="e.g., smtp.example.com:587">
             </div>
 
+            <h2 class="text-xl font-semibold text-white mb-4">Debug Settings</h2>
+            <div class="mb-6 flex items-center">
+                <input type="checkbox" id="enable_login_debug" name="enable_login_debug"
+                       class="form-checkbox h-5 w-5 text-accent focus:ring-accent bg-base-100 border-base-300 rounded"
+                       {% if app_config.get('enable_login_debug') %}checked{% endif %}>
+                <label for="enable_login_debug" class="ml-2 block text-sm font-medium text-gray-400">
+                    Enable Login Debug (shows server URL on login page)
+                </label>
+            </div>
+
             <div class="flex justify-end">
                 {% if current_user.can('settings', 'full') %}
                 <button type="submit"

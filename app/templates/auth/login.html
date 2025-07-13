@@ -17,6 +17,14 @@
             {% endif %}
         {% endwith %}
 
+        <!-- Debug Host URL Display -->
+        {% if debug_host_url %} {# This block is now conditional #}
+        <div class="bg-yellow-900 text-yellow-300 p-3 rounded-md mb-4 text-sm">
+            <strong>Debug Host URL:</strong> <code>{{ debug_host_url }}</code>
+            <p class="text-xs mt-1">Ensure this matches your "Authorized JavaScript origins" in Google Cloud Console.</p>
+        </div>
+        {% endif %}
+
         <form method="POST" action="{{ url_for('auth.login') }}" class="mb-4">
             <div class="mb-4">
                 <label for="username" class="block text-sm font-medium text-gray-400 mb-2">Username</label>

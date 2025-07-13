@@ -46,6 +46,9 @@ def save_settings():
     current_settings['google_client_id'] = request.form.get('google_client_id')
     current_settings['google_client_secret'] = request.form.get('google_client_secret')
 
+    # Add new setting for login debug
+    current_settings['enable_login_debug'] = 'on' == request.form.get('enable_login_debug') # Checkbox value is 'on' if checked
+
     try:
         Config.save_app_config(current_settings) # Save updated settings to config.yaml
         # Re-load config into app.config for immediate use without restarting
@@ -53,10 +56,10 @@ def save_settings():
         from flask import current_app
         current_app.config['GOOGLE_CLIENT_ID'] = current_settings['google_client_id']
         current_app.config['GOOGLE_CLIENT_SECRET'] = current_settings['google_client_secret']
+        current_app.config['ENABLE_LOGIN_DEBUG'] = current_settings['enable_login_debug'] # Update app.config for immediate use
         
         flash('Settings saved successfully!', 'success')
     except Exception as e:
         flash(f'Error saving settings: {e}', 'error')
     
-    return redirect(url_for('settings.settings_page')) # Corrected endpoint name
-
+    return redirect(url_for('settings.settings_page'))
