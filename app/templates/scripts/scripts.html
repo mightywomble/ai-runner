@@ -1,232 +1,248 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Local Scripts Card -->
-    <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
-        <div class="p-6 border-b border-base-300">
-            <h2 class="text-lg font-semibold text-white">Local Scripts</h2>
-            <p class="text-sm text-gray-400 mt-1">Scripts saved to the local application database.</p>
-        </div>
-        <div class="p-6">
-            <ul class="space-y-2">
-                {% for script in local_scripts %}
-                <li class="flex items-center justify-between bg-base-100 border border-base-300 p-3 rounded-md">
-                    <div class="flex items-center">
-                        <i class="fas fa-scroll text-yellow-400 fa-fw mr-3"></i>
-                        <span class="font-mono text-sm">{{ script.name }}</span>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                        <form method="POST" action="{{ url_for('scripts.push_to_github', script_id=script.id) }}" class="inline">
-                             <button type="submit" class="text-gray-400 hover:text-white" title="Push to GitHub dev branch"><i class="fab fa-github"></i></button>
-                        </form>
-                        <a href="{{ url_for('scripts.edit_script', script_id=script.id) }}" class="text-gray-400 hover:text-white" title="Edit Script"><i class="fas fa-edit"></i></a>
-                        <form method="POST" action="{{ url_for('scripts.delete_script', script_id=script.id) }}" onsubmit="return confirm('Are you sure?');" class="inline">
-                            <button type="submit" class="text-gray-400 hover:text-red-500" title="Delete Script"><i class="fas fa-trash"></i></button>
-                        </form>
-                        <button class="text-gray-400 hover:text-white run-script-btn" data-script-content="{{ script.content }}" title="Run Script"><i class="fas fa-play-circle"></i></button>
-                    </div>
-                </li>
-                {% else %}
-                <li class="text-center text-gray-500 py-4">No local scripts found.</li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
+<div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold text-white mb-6">Scripts</h1>
 
-    <!-- GitHub Scripts Card -->
-    <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
-        <div class="p-6 border-b border-base-300">
-            <h2 class="text-lg font-semibold text-white">GitHub Scripts (main branch)</h2>
-            <p class="text-sm text-gray-400 mt-1">Scripts from your configured repository.</p>
-        </div>
-        <div class="p-6">
-             <ul class="space-y-2">
-                {% for script in github_scripts %}
-                <li class="flex items-center justify-between bg-base-100 border border-base-300 p-3 rounded-md">
-                    <div class="flex items-center truncate">
-                        <i class="{{ script.icon }} text-blue-400 fa-fw mr-3"></i>
-                        <span class="font-mono text-sm truncate" title="{{ script.path }}">{{ script.path }}</span>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="mb-4">
+                {% for category, message in messages %}
+                    <div class="p-3 rounded-md {% if category == 'error' %}bg-red-900 text-red-300{% elif category == 'info' %}bg-blue-900 text-blue-300{% elif category == 'success' %}bg-green-900 text-green-300{% endif %}">
+                        {{ message }}
                     </div>
-                    <div class="flex items-center space-x-3 flex-shrink-0">
-                        <button class="text-gray-400 hover:text-white github-analyze-btn" data-script-path="{{ script.path }}" title="AI Analysis"><i class="fas fa-search-plus"></i></button>
-                        <button class="text-gray-400 hover:text-white run-script-btn" data-script-path="{{ script.path }}" title="Run Script"><i class="fas fa-play-circle"></i></button>
-                    </div>
-                </li>
-                {% else %}
-                <li class="text-center text-gray-500 py-4">No GitHub scripts found or integration not configured.</li>
                 {% endfor %}
-            </ul>
-        </div>
-    </div>
-
-    <!-- Execution Output Container -->
-    <div id="run-output-container" class="hidden bg-base-200 border border-base-300 shadow-lg rounded-lg mt-6">
-        <div class="p-6 border-b border-base-300 flex justify-between items-center">
-            <h2 class="text-lg font-semibold text-white">Execution Output</h2>
-            <div class="flex items-center space-x-4">
-                <button id="analyze-output-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md text-sm">
-                    <i class="fas fa-search-plus mr-2"></i>AI Analysis
-                </button>
-                <button id="clear-run-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
             </div>
-        </div>
-        <div id="run-output-content" class="p-6 font-mono text-sm"></div>
-    </div>
-</div>
+        {% endif %}
+    {% endwith %}
 
-<!-- Host Selection Modal -->
-<div id="host-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-md border border-base-300">
-        <div class="p-6 border-b border-base-300"><h3 class="text-lg font-semibold text-white">Select Hosts</h3></div>
-        <div id="host-list" class="p-6 max-h-64 overflow-y-auto space-y-2"></div>
-        <div class="p-6 bg-base-100 border-t border-base-300 flex justify-end space-x-4">
-            <button id="cancel-run-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
-            <button id="confirm-run-btn" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">Run Script</button>
+    <!-- Local Scripts Section -->
+    <div class="bg-base-200 p-6 rounded-lg shadow-lg border border-base-300 mb-8">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-semibold text-white">Local Scripts</h2>
+            {# Add button to create new script if user has full permissions #}
+            {% if current_user.can('scripts', 'full') %}
+            <a href="{{ url_for('scripts.edit_script', script_id=0) }}" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                <i class="fas fa-plus-circle mr-2"></i>New Script
+            </a>
+            {% endif %}
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-base-100 rounded-lg overflow-hidden">
+                <thead class="bg-base-300">
+                    <tr>
+                        <th class="py-3 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                        <th class="py-3 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Type</th>
+                        <th class="py-3 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Last Updated</th>
+                        <th class="py-3 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-base-300">
+                    {% for script in local_scripts %}
+                    <tr>
+                        <td class="py-3 px-4 whitespace-nowrap">{{ script.name }}</td>
+                        <td class="py-3 px-4 whitespace-nowrap">{{ script.script_type }}</td>
+                        <td class="py-3 px-4 whitespace-nowrap">{{ script.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            {% if current_user.can('scripts', 'full') %}
+                            <a href="{{ url_for('scripts.edit_script', script_id=script.id) }}" class="text-accent hover:text-blue-400 mr-3" title="Edit Script">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ url_for('scripts.delete_script', script_id=script.id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete script {{ script.name }}?');">
+                                <button type="submit" class="text-red-500 hover:text-red-400 mr-3" title="Delete Script">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
+                            <form action="{{ url_for('scripts.push_to_github', script_id=script.id) }}" method="POST" class="inline" onsubmit="return confirm('Push {{ script.name }} to GitHub dev branch?');">
+                                <button type="submit" class="text-blue-500 hover:text-blue-400" title="Push to GitHub">
+                                    <i class="fab fa-github"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-gray-500">No actions</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="py-3 px-4 text-center text-gray-500">No local scripts found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-</div>
 
-<!-- AI Analysis Modal -->
-<div id="output-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-4xl border border-base-300 flex flex-col" style="max-height: 90vh;">
-        <div class="p-6 border-b border-base-300 flex justify-between items-center">
-            <h3 id="output-modal-title" class="text-lg font-semibold text-white">AI Analysis</h3>
-            <button id="close-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+    <!-- GitHub Scripts Section -->
+    <div class="bg-base-200 p-6 rounded-lg shadow-lg border border-base-300">
+        <h2 class="text-2xl font-semibold text-white mb-4">GitHub Scripts</h2>
+        <div id="github-scripts-loading" class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-accent text-4xl mb-4"></i>
+            <p class="text-gray-400">Loading GitHub scripts...</p>
         </div>
-        <div id="output-modal-content" class="p-6 overflow-y-auto flex-1 font-mono text-sm"></div>
+        <div id="github-scripts-content" class="overflow-x-auto hidden">
+            <table class="min-w-full bg-base-100 rounded-lg overflow-hidden">
+                <thead class="bg-base-300">
+                    <tr>
+                        <th class="py-3 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                        <th class="py-3 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Path</th>
+                        <th class="py-3 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Type</th>
+                        <th class="py-3 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="github-scripts-table-body" class="divide-y divide-base-300">
+                    <!-- GitHub scripts will be dynamically loaded here -->
+                </tbody>
+            </table>
+            <p id="github-scripts-empty-message" class="py-3 px-4 text-center text-gray-500 hidden">No GitHub scripts found or GitHub settings not configured.</p>
+        </div>
     </div>
 </div>
 
 <script>
-try {
-    let currentScriptContent = '';
-    const hostModal = document.getElementById('host-modal');
-    const outputModal = document.getElementById('output-modal');
-    const runOutputContainer = document.getElementById('run-output-container');
-    const runOutputContent = document.getElementById('run-output-content');
-    const aiProviderSelect = document.getElementById('ai-provider');
+    document.addEventListener('DOMContentLoaded', function() {
+        const githubScriptsLoading = document.getElementById('github-scripts-loading');
+        const githubScriptsContent = document.getElementById('github-scripts-content');
+        const githubScriptsTableBody = document.getElementById('github-scripts-table-body');
+        const githubScriptsEmptyMessage = document.getElementById('github-scripts-empty-message');
 
-    function showModal(modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
-    function hideModal(modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
-    
-    function renderCollapsible(text) {
-        const contentArea = document.createElement('div');
-        const sections = text.split(/\n\s*HEADING:\s*/);
-        const intro = document.createElement('div');
-        intro.className = 'whitespace-pre-wrap mb-4';
-        intro.textContent = sections[0].trim();
-        contentArea.appendChild(intro);
-        sections.slice(1).forEach((section, index) => {
-            const lines = section.split('\n');
-            const title = lines[0].trim();
-            let content = lines.slice(1).join('\n').replace(/```([\s\S]*?)```/g, (match, code) => `<pre class="bg-base-100 p-3 rounded-md my-2 text-gray-300"><code>${code.trim()}</code></pre>`);
-            const sectionDiv = document.createElement('div');
-            sectionDiv.className = 'border-t border-base-300 pt-4 mt-4';
-            const button = document.createElement('button');
-            button.className = 'w-full text-left flex justify-between items-center text-white font-semibold';
-            button.innerHTML = `<span>${title}</span><i class="fas fa-chevron-down transform transition-transform"></i>`;
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'mt-2 text-gray-400 whitespace-pre-wrap';
-            contentDiv.innerHTML = content;
-            if (index > 0) contentDiv.classList.add('hidden');
-            else button.querySelector('i').classList.add('rotate-180');
-            button.addEventListener('click', () => {
-                contentDiv.classList.toggle('hidden');
-                button.querySelector('i').classList.toggle('rotate-180');
-            });
-            sectionDiv.appendChild(button);
-            sectionDiv.appendChild(contentDiv);
-            contentArea.appendChild(sectionDiv);
-        });
-        return contentArea;
-    }
+        // Function to fetch and render GitHub scripts
+        function fetchGitHubScripts() {
+            githubScriptsLoading.classList.remove('hidden');
+            githubScriptsContent.classList.add('hidden');
+            githubScriptsTableBody.innerHTML = ''; // Clear previous content
 
-    document.body.addEventListener('click', function(event) {
-        const button = event.target.closest('button');
-        if (!button) return;
+            fetch("{{ url_for('scripts.get_github_scripts') }}")
+                .then(response => response.json())
+                .then(data => {
+                    githubScriptsLoading.classList.add('hidden');
+                    githubScriptsContent.classList.remove('hidden');
 
-        if (button.classList.contains('run-script-btn')) {
-            const scriptContent = button.dataset.scriptContent;
-            const scriptPath = button.dataset.scriptPath;
-            const fetchPromise = scriptContent ? Promise.resolve(scriptContent) : fetch("{{ url_for('scripts.get_github_script_content') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: scriptPath }) }).then(res => res.json()).then(data => { if (data.error) throw new Error(data.error); return data.content; });
-            fetchPromise.then(content => {
-                currentScriptContent = content;
-                return fetch("{{ url_for('main.get_hosts') }}");
-            }).then(res => res.json()).then(hosts => {
-                document.getElementById('host-list').innerHTML = hosts.length > 0 ? hosts.map(h => `<label class="flex items-center space-x-3 p-2 rounded-md hover:bg-base-300 cursor-pointer"><input type="checkbox" value="${h.id}" class="form-checkbox h-5 w-5 bg-base-100 border-base-300 text-accent focus:ring-accent"><span>${h.name}</span></label>`).join('') : '<p class="text-gray-400">No hosts found.</p>';
-                showModal(hostModal);
-            }).catch(err => alert('Error: ' + err.message));
-        }
-
-        if (button.classList.contains('github-analyze-btn')) {
-            const scriptPath = button.dataset.scriptPath;
-            const content = document.getElementById('output-modal-content');
-            document.getElementById('output-modal-title').textContent = `AI Analysis: ${scriptPath}`;
-            content.innerHTML = '<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...</div>';
-            showModal(outputModal);
-            fetch("{{ url_for('scripts.get_github_script_content') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: scriptPath }) }).then(res => res.json()).then(data => {
-                if (data.error) throw new Error(data.error);
-                return fetch("{{ url_for('scripts.analyze_script') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ script: data.content, ai_provider: aiProviderSelect.value }) });
-            }).then(res => res.json()).then(data => {
-                content.innerHTML = '';
-                if (data.error) content.innerHTML = `<pre class="text-red-500">${data.error}</pre>`;
-                else content.appendChild(renderCollapsible(data.output));
-            }).catch(err => content.innerHTML = `<pre class="text-red-500">${err.message}</pre>`);
-        }
-        
-        if (button.id === 'analyze-output-btn') {
-            const outputContent = runOutputContent.innerText;
-            if (!outputContent) return alert('No execution output to analyze.');
-
-            const content = document.getElementById('output-modal-content');
-            document.getElementById('output-modal-title').textContent = `Execution Output Analysis`;
-            content.innerHTML = '<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...</div>';
-            showModal(outputModal);
-
-            fetch("{{ url_for('main.analyze_output') }}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    script: currentScriptContent,
-                    output: outputContent,
-                    error: '', // Assume success for simplicity, can be enhanced
-                    ai_provider: aiProviderSelect.value
+                    if (data.error) {
+                        githubScriptsEmptyMessage.textContent = `Error loading GitHub scripts: ${data.error}`;
+                        githubScriptsEmptyMessage.classList.remove('hidden');
+                    } else if (data.message) { // e.g., "GitHub settings not configured."
+                        githubScriptsEmptyMessage.textContent = data.message;
+                        githubScriptsEmptyMessage.classList.remove('hidden');
+                    }
+                    else if (data.github_scripts && data.github_scripts.length > 0) {
+                        data.github_scripts.forEach(script => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td class="py-3 px-4 whitespace-nowrap flex items-center">
+                                    <i class="${script.icon} mr-2"></i>${script.name}
+                                </td>
+                                <td class="py-3 px-4 text-sm text-gray-400 break-all">${script.path}</td>
+                                <td class="py-3 px-4 whitespace-nowrap">${script.type}</td>
+                                <td class="py-3 px-4 whitespace-nowrap">
+                                    <button class="text-blue-500 hover:text-blue-400 mr-3 view-github-script" data-path="${script.path}" title="View Content">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="text-green-500 hover:text-green-400 pull-github-script" data-path="${script.path}" data-name="${script.name}" data-type="${script.type}" title="Pull to Local">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                </td>
+                            `;
+                            githubScriptsTableBody.appendChild(row);
+                        });
+                        githubScriptsEmptyMessage.classList.add('hidden');
+                    } else {
+                        githubScriptsEmptyMessage.textContent = 'No GitHub scripts found.';
+                        githubScriptsEmptyMessage.classList.remove('hidden');
+                    }
                 })
-            }).then(res => res.json()).then(data => {
-                content.innerHTML = '';
-                if (data.error) content.innerHTML = `<pre class="text-red-500">${data.error}</pre>`;
-                else content.appendChild(renderCollapsible(data.output));
-            }).catch(err => content.innerHTML = `<pre class="text-red-500">${err.message}</pre>`);
-        }
-
-        if (button.id === 'cancel-run-btn') hideModal(hostModal);
-        if (button.id === 'close-output-btn') hideModal(outputModal);
-        if (button.id === 'clear-run-output-btn') {
-            runOutputContent.innerHTML = '';
-            runOutputContainer.classList.add('hidden');
-        }
-
-        if (button.id === 'confirm-run-btn') {
-            const selectedHosts = Array.from(document.querySelectorAll('#host-list input:checked')).map(cb => cb.value);
-            if (selectedHosts.length === 0) return alert('Please select at least one host.');
-            hideModal(hostModal);
-            runOutputContainer.classList.remove('hidden');
-            runOutputContent.innerHTML = '<div class="p-4"><i class="fas fa-spinner fa-spin mr-2"></i>Running script...</div>';
-            fetch("{{ url_for('main.run_script') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ script: currentScriptContent, host_ids: selectedHosts, use_sudo: false }) })
-            .then(res => res.json()).then(data => {
-                runOutputContent.innerHTML = '';
-                data.results.forEach(result => {
-                    const resultDiv = document.createElement('div');
-                    resultDiv.className = 'mb-4 p-4 rounded-md border ' + (result.success ? 'border-green-500 bg-green-900 bg-opacity-20' : 'border-red-500 bg-red-900 bg-opacity-20');
-                    resultDiv.innerHTML = `<h4 class="font-bold text-white">${result.host_name}</h4><div class="mt-2"><strong class="text-gray-400">Output:</strong><pre class="whitespace-pre-wrap text-gray-300">${result.output || '(No output)'}</pre></div>${result.error ? `<div class="mt-2"><strong class="text-red-400">Error:</strong><pre class="whitespace-pre-wrap text-red-400">${result.error}</pre></div>` : ''}`;
-                    runOutputContent.appendChild(resultDiv);
+                .catch(error => {
+                    githubScriptsLoading.classList.add('hidden');
+                    githubScriptsContent.classList.remove('hidden');
+                    githubScriptsEmptyMessage.textContent = `Failed to load GitHub scripts: ${error}`;
+                    githubScriptsEmptyMessage.classList.remove('hidden');
+                    console.error('Error fetching GitHub scripts:', error);
                 });
-            });
         }
+
+        // Event listener for viewing GitHub script content
+        githubScriptsTableBody.addEventListener('click', function(event) {
+            const viewButton = event.target.closest('.view-github-script');
+            if (viewButton) {
+                const scriptPath = viewButton.dataset.path;
+                if (!scriptPath) return;
+
+                alert('Loading script content... (This would open a modal with content)'); // Placeholder for modal
+                // In a real app, you'd fetch content and open a modal
+                fetch("{{ url_for('scripts.get_github_script_content') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: scriptPath })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error viewing script: ' + data.error);
+                    } else {
+                        // Display content in a modal or new window
+                        const scriptContent = data.content;
+                        const newWindow = window.open("", "_blank", "width=800,height=600,scrollbars=yes");
+                        newWindow.document.write(`<pre>${scriptContent}</pre>`);
+                        newWindow.document.close();
+                    }
+                })
+                .catch(error => {
+                    alert('Error fetching script content.');
+                    console.error('Fetch error:', error);
+                });
+            }
+
+            const pullButton = event.target.closest('.pull-github-script');
+            if (pullButton) {
+                const scriptPath = pullButton.dataset.path;
+                const scriptName = pullButton.dataset.name;
+                const scriptType = pullButton.dataset.type; // Get script type
+                if (!scriptPath || !scriptName || !scriptType) return;
+
+                if (confirm(`Pull script "${scriptName}" from GitHub to local storage?`)) {
+                    fetch("{{ url_for('scripts.get_github_script_content') }}", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: scriptPath })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert('Error pulling script: ' + data.error);
+                        } else {
+                            const scriptContent = data.content;
+                            // Now save this content as a local script
+                            fetch("{{ url_for('scripts.save_script') }}", { // Use the save_script endpoint
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name: scriptName, content: scriptContent, script_type: scriptType })
+                            })
+                            .then(saveResponse => saveResponse.json())
+                            .then(saveData => {
+                                if (saveData.success) {
+                                    alert(saveData.message);
+                                    // Optionally refresh local scripts section or the whole page
+                                    window.location.reload();
+                                } else {
+                                    alert('Error saving local script: ' + saveData.error);
+                                }
+                            })
+                            .catch(saveError => {
+                                alert('Network error while saving local script.');
+                                console.error('Save error:', saveError);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        alert('Error fetching GitHub script content for pull.');
+                        console.error('Fetch error:', error);
+                    });
+                }
+            }
+        });
+
+        // Call the function to fetch GitHub scripts when the page loads
+        fetchGitHubScripts();
     });
-} catch (e) {
-    console.error("A critical error occurred on the page:", e);
-}
 </script>
 {% endblock %}
