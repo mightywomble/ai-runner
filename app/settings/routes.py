@@ -1,45 +1,62 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, flash, redirect, url_for, request
+from flask_login import login_required, current_user
+from app import db
+from app.models import Group
 from config import Config
-from . import bp
-import requests
-import json
+import functools
+from . import bp # Added this line to import the blueprint
 
-@bp.route('/', methods=['GET', 'POST'])
-def settings():
-    if request.method == 'POST':
-        # Get existing config to preserve keys not in the form
-        app_config = Config.get_app_config() or {}
-        
-        # Filter out empty password fields to avoid saving blank values over existing ones
-        form_data = {key: value for key, value in request.form.items() if value}
-        app_config.update(form_data)
+# Helper decorator for permission checking
+def permission_required(feature, access_level):
+    def decorator(f):
+        @login_required
+        @functools.wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.can(feature, access_level):
+                flash(f'You do not have {access_level} access to {feature}.', 'error')
+                return redirect(url_for('main.index')) # Redirect to home or an unauthorized page
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
-        Config.save_app_config(app_config)
-        flash('Settings saved successfully!', 'success')
-        return redirect(url_for('settings.settings'))
-        
-    app_config = Config.get_app_config()
+@bp.route('/')
+@bp.route('/settings')
+@login_required
+@permission_required('settings', 'view') # Requires 'view' access to 'settings' feature
+def settings_page():
+    app_config = Config.get_app_config() # This gets settings from config.yaml
+    return render_template('settings/settings.html', title='Application Settings', app_config=app_config)
+
+@bp.route('/settings/save', methods=['POST'])
+@login_required
+@permission_required('settings', 'full') # Requires 'full' access to 'settings' feature
+def save_settings():
+    # Get current settings from config.yaml
+    current_settings = Config.get_app_config()
     
-    # Ensure app_config is a dictionary, even if the yaml file is empty
-    if app_config is None:
-        app_config = {}
-        
-    return render_template('settings/settings.html', title='Settings', config=app_config)
+    # Update with form data
+    current_settings['github_api_key'] = request.form.get('github_api_key')
+    current_settings['github_repo'] = request.form.get('github_repo')
+    current_settings['gemini_api_key'] = request.form.get('gemini_api_key')
+    current_settings['chatgpt_api_key'] = request.form.get('chatgpt_api_key')
+    current_settings['discord_webhook'] = request.form.get('discord_webhook')
+    current_settings['email_server'] = request.form.get('email_server') # Assuming this is a simple string for now
 
-@bp.route('/test-discord', methods=['POST'])
-def test_discord():
-    data = request.get_json()
-    webhook_url = data.get('webhook_url')
-
-    if not webhook_url:
-        return jsonify({'success': False, 'error': 'Webhook URL is missing.'}), 400
-
-    headers = {'Content-Type': 'application/json'}
-    payload = json.dumps({'content': 'This is a test message from AI Ops Runner.'})
+    # Add Google OAuth settings
+    current_settings['google_client_id'] = request.form.get('google_client_id')
+    current_settings['google_client_secret'] = request.form.get('google_client_secret')
 
     try:
-        response = requests.post(webhook_url, data=payload, headers=headers, timeout=5)
-        response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
-        return jsonify({'success': True})
-    except requests.exceptions.RequestException as e:
-        return jsonify({'success': False, 'error': str(e)})
+        Config.save_app_config(current_settings) # Save updated settings to config.yaml
+        # Re-load config into app.config for immediate use without restarting
+        # This is important for Authlib to pick up new client IDs/secrets
+        from flask import current_app
+        current_app.config['GOOGLE_CLIENT_ID'] = current_settings['google_client_id']
+        current_app.config['GOOGLE_CLIENT_SECRET'] = current_settings['google_client_secret']
+        
+        flash('Settings saved successfully!', 'success')
+    except Exception as e:
+        flash(f'Error saving settings: {e}', 'error')
+    
+    return redirect(url_for('settings.settings_page')) # Corrected endpoint name
+

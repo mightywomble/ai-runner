@@ -3,13 +3,16 @@ from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
-from flask_login import LoginManager # Import LoginManager
+from flask_login import LoginManager
+from authlib.integrations.flask_client import OAuth # Re-import OAuth
 
 db = SQLAlchemy()
 migrate = Migrate()
-login = LoginManager() # Initialize LoginManager
-login.login_view = 'auth.login' # Set the login view endpoint
-login.login_message = 'Please log in to access this page.' # Optional: message for unauthenticated users
+login = LoginManager()
+login.login_view = 'auth.login'
+login.login_message = 'Please log in to access this page.'
+
+oauth = OAuth() # Re-initialize Authlib OAuth
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -20,13 +23,28 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     migrate.init_app(app, db)
-    login.init_app(app) # Initialize Flask-Login with the app
+    login.init_app(app)
+    oauth.init_app(app) # Re-initialize Authlib OAuth with the app
 
     # User loader function for Flask-Login
-    from app.models import User # Import User model here to avoid circular dependency
+    from app.models import User
     @login.user_loader
     def load_user(id):
         return User.query.get(int(id))
+
+    # Re-configure Google OAuth
+    oauth.register(
+        name='google',
+        client_id=app.config.get('GOOGLE_CLIENT_ID'), # Uses Config.GOOGLE_CLIENT_ID
+        client_secret=app.config.get('GOOGLE_CLIENT_SECRET'), # Uses Config.GOOGLE_CLIENT_SECRET
+        access_token_url='https://oauth2.googleapis.com/token',
+        access_token_params=None,
+        authorize_url='https://accounts.google.com/o/oauth2/auth',
+        authorize_params=None,
+        api_base_url='https://www.googleapis.com/oauth2/v1/',
+        client_kwargs={'scope': 'openid email profile'},
+        jwks_uri='https://www.googleapis.com/oauth2/v3/certs' # Required for OIDC
+    )
 
     # Register blueprints
     from .main import bp as main_bp
@@ -38,7 +56,7 @@ def create_app(config_class=Config):
     from .hosts import bp as hosts_bp
     app.register_blueprint(hosts_bp)
 
-    from app.pipelines import bp as pipelines_bp
+    from .pipelines import bp as pipelines_bp
     app.register_blueprint(pipelines_bp, url_prefix='/pipelines')
 
     from .settings import bp as settings_bp
@@ -47,13 +65,12 @@ def create_app(config_class=Config):
     from .users import bp as users_bp
     app.register_blueprint(users_bp, url_prefix='/users')
 
-    # New: Register the authentication blueprint
     from .auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
 
     # Register CLI commands
-    from app.cli import register_cli_commands # Import the function
-    register_cli_commands(app) # Call the function to register commands
+    from app.cli import register_cli_commands
+    register_cli_commands(app)
 
 
     @app.route('/test/')

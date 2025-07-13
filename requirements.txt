@@ -8,3 +8,4 @@ openai
 requests
 PyGithub
 Flask-CORS
+Authlib
