@@ -2,7 +2,7 @@ from . import db
 from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-import json # Import json to handle permissions column
+import json
 
 class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -102,3 +102,11 @@ class Pipeline(db.Model):
 
     def __repr__(self):
         return f"Pipeline('{self.name}')"
+
+class Setting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(64), unique=True, nullable=False)
+    value = db.Column(db.String(256), nullable=False)
+
+    def __repr__(self):
+        return f'<Setting {self.key}>'
