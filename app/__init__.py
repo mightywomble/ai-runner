@@ -59,7 +59,13 @@ def resync_scheduler_jobs(app):
     """
     with app.app_context():
         from app.models import ScheduledJob
-        
+        from sqlalchemy import inspect
+
+        inspector = inspect(db.engine)
+        if not inspector.has_table('scheduled_job'):
+             print("INFO: 'scheduled_job' table not found, skipping scheduler sync. This is normal during initial db setup.")
+             return
+
         # Use the renamed scheduler object
         bg_scheduler.remove_all_jobs()
         jobs = ScheduledJob.query.filter_by(is_enabled=True).all()

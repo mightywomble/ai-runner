@@ -242,6 +242,13 @@ def run_pipeline(pipeline_id):
             elif node['name'] == 'Send Email':
                 recipient = node.get('data', {}).get('recipient', current_user.email)
                 subject = f"Fysseree AIOps Pipeline Report: {pipeline.name}"
+
+                # --- FIX START ---
+                # Get the analysis and perform the replace operation *before* the f-string.
+                ai_analysis = context.get('last_analysis', 'N/A')
+                formatted_analysis = ai_analysis.replace('\n', '<br>')
+                # --- FIX END ---
+
                 body = f"""
                 <html><body>
                 <h2>Pipeline Execution Report</h2>
@@ -254,11 +261,11 @@ def run_pipeline(pipeline_id):
                 <h3>Error:</h3>
                 <pre><code>{context.get('last_error', 'N/A')}</code></pre>
                 <h3>AI Analysis:</h3>
-                <p>{context.get('last_analysis', 'N/A').replace('\n', '<br>')}</p>
-                </body></html>
+                <p>{formatted_analysis}</p> </body></html>
                 """
                 success, message = send_email(recipient, subject, body)
                 execution_results.append({'step_name': step_name, 'success': success, 'output': message, 'error': '' if success else message})
+
     
     return jsonify({'results': execution_results})
 
