@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-white">Pipeline Scheduler</h1>
+        <button onclick="openAddModal()" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
+            <i class="fas fa-plus mr-2"></i>New Scheduled Job
+        </button>
+    </div>
+
+    <div class="bg-base-200 p-6 rounded-lg shadow-lg border border-base-300">
+        <table class="w-full text-left text-gray-300">
+            <thead>
+                <tr class="border-b border-base-300">
+                    <th class="p-4">Name</th>
+                    <th class="p-4">Pipeline</th>
+                    <th class="p-4">Schedule (CRON)</th>
+                    <th class="p-4">Next Run</th>
+                    <th class="p-4">Status</th>
+                    <th class="p-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr class="border-b border-base-300 hover:bg-base-100">
+                    <td class="p-4">{{ job.name }}</td>
+                    <td class="p-4">{{ job.pipeline.name }}</td>
+                    <td class="p-4 font-mono">{{ job.cron_string }}</td>
+                    <td class="p-4">{{ job.next_run.strftime('%Y-%m-%d %H:%M:%S') if job.next_run else 'N/A' }}</td>
+                    <td class="p-4">
+                        <span class="px-2 py-1 text-xs rounded-full {{ 'bg-green-900 text-green-300' if job.is_enabled else 'bg-red-900 text-red-300' }}">
+                            {{ 'Enabled' if job.is_enabled else 'Disabled' }}
+                        </span>
+                    </td>
+                    <td class="p-4 flex items-center space-x-4">
+                        <button onclick="openEditModal({{ job.id }}, '{{ job.name }}', {{ job.pipeline_id }}, '{{ job.cron_string }}')" class="text-gray-400 hover:text-blue-500" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <form action="{{ url_for('scheduler.run_now', job_id=job.id) }}" method="post" class="inline">
+                            <button type="submit" class="text-gray-400 hover:text-green-500" title="Run Now">
+                                <i class="fas fa-play-circle"></i>
+                            </button>
+                        </form>
+                        <form action="{{ url_for('scheduler.toggle_schedule', job_id=job.id) }}" method="post">
+                            <button type="submit" class="text-gray-400 hover:text-white" title="{{ 'Disable' if job.is_enabled else 'Enable' }}">
+                                <i class="fas {{ 'fa-toggle-on text-green-500' if job.is_enabled else 'fa-toggle-off text-gray-500' }}"></i>
+                            </button>
+                        </form>
+                        <form action="{{ url_for('scheduler.delete_schedule', job_id=job.id) }}" method="post" onsubmit="return confirm('Are you sure you want to delete this scheduled job?');">
+                            <button type="submit" class="text-gray-400 hover:text-red-500" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="p-4 text-center text-gray-500">No scheduled jobs found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="scheduleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-lg border border-base-300">
+        <form id="scheduleForm" method="POST" action="">
+            <div class="p-6 border-b border-base-300">
+                <h3 id="modalTitle" class="text-lg font-semibold text-white">New Scheduled Job</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-400 mb-2">Job Name</label>
+                    <input type="text" name="name" id="name" required class="w-full bg-base-100 border border-base-300 rounded-md py-2 px-3 text-white" placeholder="e.g., Daily Backup">
+                </div>
+                <div>
+                    <label for="pipeline_id" class="block text-sm font-medium text-gray-400 mb-2">Pipeline to Run</label>
+                    <select name="pipeline_id" id="pipeline_id" required class="w-full bg-base-100 border border-base-300 rounded-md py-2 px-3 text-white">
+                        {% for pipeline in pipelines %}
+                        <option value="{{ pipeline.id }}">{{ pipeline.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- User-friendly schedule builder -->
+                <div>
+                    <label for="schedule_type" class="block text-sm font-medium text-gray-400 mb-2">Schedule Type</label>
+                    <select id="schedule_type" class="w-full bg-base-100 border border-base-300 rounded-md py-2 px-3 text-white">
+                        <option value="custom">Custom CRON</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                <div id="schedule_options" class="space-y-4 pl-4 border-l-2 border-base-300">
+                    <div id="daily_options" class="hidden">
+                        <label for="daily_time" class="block text-sm font-medium text-gray-400 mb-2">Time (UTC)</label>
+                        <input type="time" id="daily_time" class="bg-base-100 border border-base-300 rounded-md py-2 px-3 text-white">
+                    </div>
+                    <div id="weekly_options" class="hidden">
+                        <label for="weekly_day" class="block text-sm font-medium text-gray-400 mb-2">Day of the Week</label>
+                        <select id="weekly_day" class="w-full bg-base-100 border border-base-300 rounded-md py-2 px-3 text-white">
+                            <option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option>
+                        </select>
+                        <label for="weekly_time" class="block text-sm font-medium text-gray-400 mb-2 mt-2">Time (UTC)</label>
+                        <input type="time" id="weekly_time" class="bg-base-100 border border-base-300 rounded-md py-2 px-3 text-white">
+                    </div>
+                    <div id="monthly_options" class="hidden">
+                        <label for="monthly_day" class="block text-sm font-medium text-gray-400 mb-2">Day of the Month</label>
+                        <input type="number" id="monthly_day" min="1" max="31" class="w-full bg-base-100 border border-base-300 rounded-md py-2 px-3 text-white">
+                        <label for="monthly_time" class="block text-sm font-medium text-gray-400 mb-2 mt-2">Time (UTC)</label>
+                        <input type="time" id="monthly_time" class="bg-base-100 border border-base-300 rounded-md py-2 px-3 text-white">
+                    </div>
+                </div>
+                <div>
+                    <label for="cron_string" class="block text-sm font-medium text-gray-400 mb-2">Generated CRON Schedule</label>
+                    <input type="text" name="cron_string" id="cron_string" required class="w-full bg-base-300 border border-base-300 rounded-md py-2 px-3 text-white font-mono" placeholder="* * * * *">
+                    <p class="text-xs text-gray-500 mt-1">Use <a href="https://crontab.guru/" target="_blank" class="text-accent hover:underline">crontab.guru</a> to verify your schedule.</p>
+                </div>
+            </div>
+            <div class="p-6 bg-base-100 border-t border-base-300 flex justify-end space-x-4">
+                <button type="button" onclick="closeModal('scheduleModal')" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
+                <button type="submit" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">Save Schedule</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const scheduleModal = document.getElementById('scheduleModal');
+const scheduleForm = document.getElementById('scheduleForm');
+const modalTitle = document.getElementById('modalTitle');
+const scheduleType = document.getElementById('schedule_type');
+const cronStringInput = document.getElementById('cron_string');
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+
+function openAddModal() {
+    scheduleForm.action = "{{ url_for('scheduler.add_schedule') }}";
+    modalTitle.textContent = 'New Scheduled Job';
+    scheduleForm.reset();
+    updateCronGenerator();
+    openModal('scheduleModal');
+}
+
+function openEditModal(jobId, name, pipelineId, cronString) {
+    scheduleForm.action = `{{ url_for('scheduler.edit_schedule', job_id=0) }}`.replace('0', jobId);
+    modalTitle.textContent = 'Edit Scheduled Job';
+    scheduleForm.name.value = name;
+    scheduleForm.pipeline_id.value = pipelineId;
+    scheduleForm.cron_string.value = cronString;
+    // For simplicity, we default to custom CRON on edit.
+    // A more advanced version could parse the cron string back to the UI fields.
+    scheduleType.value = 'custom'; 
+    updateCronGenerator();
+    openModal('scheduleModal');
+}
+
+function generateCronString() {
+    const type = scheduleType.value;
+    let cron = '* * * * *'; // Default
+
+    if (type === 'daily') {
+        const time = document.getElementById('daily_time').value || '00:00';
+        const [hour, minute] = time.split(':');
+        cron = `${minute} ${hour} * * *`;
+    } else if (type === 'weekly') {
+        const day = document.getElementById('weekly_day').value;
+        const time = document.getElementById('weekly_time').value || '00:00';
+        const [hour, minute] = time.split(':');
+        cron = `${minute} ${hour} * * ${day}`;
+    } else if (type === 'monthly') {
+        const day = document.getElementById('monthly_day').value || '1';
+        const time = document.getElementById('monthly_time').value || '00:00';
+        const [hour, minute] = time.split(':');
+        cron = `${minute} ${hour} ${day} * *`;
+    }
+    
+    cronStringInput.value = cron;
+}
+
+function updateCronGenerator() {
+    const type = scheduleType.value;
+    document.getElementById('daily_options').classList.toggle('hidden', type !== 'daily');
+    document.getElementById('weekly_options').classList.toggle('hidden', type !== 'weekly');
+    document.getElementById('monthly_options').classList.toggle('hidden', type !== 'monthly');
+    cronStringInput.readOnly = type !== 'custom';
+    if(type !== 'custom') {
+        generateCronString();
+    }
+}
+
+// Event Listeners
+scheduleType.addEventListener('change', updateCronGenerator);
+document.getElementById('daily_time').addEventListener('change', generateCronString);
+document.getElementById('weekly_day').addEventListener('change', generateCronString);
+document.getElementById('weekly_time').addEventListener('change', generateCronString);
+document.getElementById('monthly_day').addEventListener('change', generateCronString);
+document.getElementById('monthly_time').addEventListener('change', generateCronString);
+
+// Initial setup
+updateCronGenerator();
+</script>
+{% endblock %}

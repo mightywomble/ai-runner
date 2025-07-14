@@ -109,3 +109,17 @@ class Setting(db.Model):
 
     def __repr__(self):
         return f'<Setting {self.key}>'
+
+class ScheduledJob(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    pipeline_id = db.Column(db.Integer, db.ForeignKey('pipeline.id'), nullable=False)
+    cron_string = db.Column(db.String(100), nullable=False) # e.g., '0 2 * * *'
+    is_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    last_run = db.Column(db.DateTime, nullable=True)
+    next_run = db.Column(db.DateTime, nullable=True)
+    
+    pipeline = db.relationship('Pipeline', backref='scheduled_jobs')
+
+    def __repr__(self):
+        return f'<ScheduledJob {self.name}>'

@@ -80,6 +80,10 @@
                     <i class="fas fa-cogs fa-fw mr-3"></i>
                     <span class="sidebar-text">Pipelines</span>
                 </a>
+                <a href="{{ url_for('scheduler.schedule_list') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'scheduler' in request.endpoint else '' }}">
+                    <i class="fas fa-clock fa-fw mr-3"></i>
+                    <span class="sidebar-text">Scheduler</span>
+                </a>
                  <a href="{{ url_for('hosts.hosts_page') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'hosts' in request.endpoint else '' }}">
                     <i class="fas fa-server fa-fw mr-3"></i>
                     <span class="sidebar-text">Hosts</span>
