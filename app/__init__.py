@@ -5,14 +5,23 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_login import LoginManager
 from authlib.integrations.flask_client import OAuth
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.triggers.cron import CronTrigger
 
 db = SQLAlchemy()
 migrate = Migrate()
 login = LoginManager()
 login.login_view = 'auth.login'
 login.login_message = 'Please log in to access this page.'
-
 oauth = OAuth()
+
+# Configure the scheduler to use the database as its job store
+jobstores = {
+    'default': SQLAlchemyJobStore(url=Config.SQLALCHEMY_DATABASE_URI)
+}
+# Renamed 'scheduler' to 'bg_scheduler' to avoid name conflicts
+bg_scheduler = BackgroundScheduler(jobstores=jobstores, daemon=True)
 
 def get_distro_icon(distro):
     """Return appropriate icon for Linux distribution."""
@@ -43,6 +52,31 @@ def get_distro_class(distro):
         return 'distro-other'
     return f"distro-{distro.lower().replace(' ', '_').replace('!', '').replace('linux', '').strip('_')}"
 
+def resync_scheduler_jobs(app):
+    """
+    Clears existing jobs and re-adds all enabled jobs from the database.
+    This ensures the scheduler is in sync with the DB on app startup.
+    """
+    with app.app_context():
+        from app.models import ScheduledJob
+        
+        # Use the renamed scheduler object
+        bg_scheduler.remove_all_jobs()
+        jobs = ScheduledJob.query.filter_by(is_enabled=True).all()
+        for job in jobs:
+            try:
+                # Use the renamed scheduler object and pass the task as a string
+                bg_scheduler.add_job(
+                    id=str(job.id),
+                    func='app.scheduler.tasks:pipeline_task', # Pass as string to avoid pickling issues
+                    args=[job.id],
+                    trigger=CronTrigger.from_crontab(job.cron_string),
+                    replace_existing=True,
+                    misfire_grace_time=3600 # Grace time of 1 hour for missed jobs
+                )
+            except Exception as e:
+                print(f"Error adding job {job.id} to scheduler: {e}")
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -54,6 +88,14 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     login.init_app(app)
     oauth.init_app(app)
+
+    # Initialize and start the scheduler
+    # Use the renamed scheduler object
+    if not bg_scheduler.running:
+        bg_scheduler.start()
+        # Resync jobs from DB after scheduler starts
+        resync_scheduler_jobs(app)
+
 
     # User loader function for Flask-Login
     from app.models import User
@@ -102,6 +144,9 @@ def create_app(config_class=Config):
 
     from .api import bp as api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
+
+    from .scheduler import bp as scheduler_bp
+    app.register_blueprint(scheduler_bp, url_prefix='/scheduler')
 
 
     # Register CLI commands

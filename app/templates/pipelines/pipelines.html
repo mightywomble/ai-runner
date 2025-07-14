@@ -274,7 +274,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const defaultHostName = defaultHostNode ? defaultHostNode.name : 'ubuntu-latest';
 
         allNodes.forEach(node => {
-            // Prevent host nodes from being rendered as jobs
             if (node.type === 'host') {
                 return;
             }
@@ -289,7 +288,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 .filter(c => c.to === node.id)
                 .map(c => {
                     const fromNode = pipeline.nodes[c.from];
-                    // Do not add hosts as dependencies
                     if (!fromNode || fromNode.type === 'host') return null;
                     return fromNode.name.replace(/[.\s/]+/g, '_').toLowerCase() + `_${fromNode.id.replace('node-','')}`;
                 })
@@ -297,7 +295,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (dependencies.length > 0) yaml += `    needs: [${dependencies.join(', ')}]\n`;
             
-            // Check for explicit host connection first, then use default
             const explicitHostNodeId = pipeline.connections.find(c => c.to === node.id && pipeline.nodes[c.from]?.type === 'host')?.from;
             const hostName = explicitHostNodeId && pipeline.nodes[explicitHostNodeId] ? pipeline.nodes[explicitHostNodeId].name : defaultHostName;
             yaml += `    runs-on: ${hostName}\n`;
@@ -434,7 +431,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const canvasRect = canvas.getBoundingClientRect();
             let maxId = 0;
             
-            // Auto-layout variables
             let autoX = 50;
             let autoY = 50;
             const nodeWidth = 200;
@@ -442,7 +438,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             Object.values(data.graph.nodes).forEach(nodeData => {
                 let pos = nodeData.position;
-                // Check if position is invalid or missing, then auto-layout
                 if (!pos || typeof pos.left === 'undefined' || typeof pos.top === 'undefined') {
                     pos = { left: autoX, top: autoY };
                     autoX += nodeWidth;
@@ -484,7 +479,6 @@ document.addEventListener('DOMContentLoaded', function() {
         runOutputContent.innerHTML = '';
         progressBarContainer.innerHTML = '';
 
-        // --- Create Progress Bar ---
         const executableNodes = Object.values(pipeline.nodes).filter(n => n.type !== 'host');
         executableNodes.forEach(node => {
             const stepEl = document.createElement('div');
@@ -494,7 +488,6 @@ document.addEventListener('DOMContentLoaded', function() {
             progressBarContainer.appendChild(stepEl);
         });
 
-        // --- Fetch and Process Results ---
         try {
             const aiProvider = document.getElementById('ai-provider').value;
             const response = await fetch(`{{ url_for('pipelines.run_pipeline', pipeline_id=0) }}`.replace('0', pipelineId), { 
@@ -515,15 +508,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const progressStep = document.getElementById(`progress-${correspondingNode.id}`);
                 
-                // Set to running
                 progressStep.classList.remove('bg-gray-500');
                 progressStep.classList.add('bg-orange-500');
                 progressStep.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i> ${correspondingNode.name}`;
                 
-                // Simulate work
                 await new Promise(res => setTimeout(res, 500)); 
 
-                // Set to final state
                 progressStep.classList.remove('bg-orange-500');
                 progressStep.classList.add(result.success ? 'bg-green-500' : 'bg-red-500');
                 progressStep.innerHTML = `<i class="fas ${result.success ? 'fa-check' : 'fa-times'} mr-1"></i> ${correspondingNode.name}`;
@@ -548,7 +538,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- Status & UI Functions ---
     function updatePipelineStatus(message, type = 'info') {
         statusEl.textContent = message;
         statusEl.className = `text-sm mt-2 ${type === 'success' ? 'text-green-500' : type === 'error' ? 'text-red-500' : 'text-gray-400'}`;
@@ -575,12 +564,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function showModal(modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
     function hideModal(modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
 
-    // --- Event Listeners ---
     document.getElementById('new-pipeline-btn').addEventListener('click', resetCanvas);
     document.getElementById('pipeline-save-btn').addEventListener('click', savePipeline);
     pipelineNameInput.addEventListener('input', markUnsaved);
 
-    // Tab switching
     document.getElementById('tabs-container').addEventListener('click', (event) => {
         const target = event.target.closest('.tab-btn');
         if (!target) return;
@@ -594,7 +581,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById(target.dataset.tab).classList.remove('hidden');
     });
 
-    // Main action buttons
     document.getElementById('pipeline-dry-run-btn').addEventListener('click', function() {
         const yaml = yamlOutput.textContent;
         if (yaml.startsWith('# Drag components')) {
@@ -620,7 +606,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('pipeline-run-btn').addEventListener('click', () => handleRun(false));
     document.getElementById('pipeline-sudo-run-btn').addEventListener('click', () => handleRun(true));
 
-    // Modal buttons
     document.getElementById('cancel-save-btn').addEventListener('click', () => hideModal(saveModal));
     document.getElementById('confirm-save-run-btn').addEventListener('click', () => {
         const pipelineName = modalPipelineNameInput.value.trim();
@@ -652,7 +637,6 @@ document.addEventListener('DOMContentLoaded', function() {
         hideModal(notesModal);
     });
 
-    // Event Delegation for dynamic elements
     document.addEventListener('click', e => {
         const target = e.target;
         const deleteBtn = target.closest('.delete-node');
@@ -677,7 +661,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- Interact.js Setup ---
     interact('.draggable-item').draggable({
         listeners: {
             start (event) {
@@ -754,7 +737,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const fromNodeEl = selectedOutput.closest('.pipeline-node');
             const toNodeEl = event.target.closest('.pipeline-node');
             if (fromNodeEl.id !== toNodeEl.id) {
-                const line = new LeaderLine(selectedOutput, event.target, { color: '#2f81f7', size: 2, path: 'fluid', endPlug: 'arrow1' });
+                const line = new LeaderLine(fromNodeEl.querySelector('.connector-out'), event.target, { color: '#2f81f7', size: 2, path: 'fluid', endPlug: 'arrow1' });
                 lines.push(line);
                 pipeline.connections.push({ from: fromNodeEl.id, to: toNodeEl.id });
                 updateYaml();
@@ -764,7 +747,6 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedOutput = null;
     });
 
-    // Initialize collapsible sections
     document.querySelectorAll('.collapsible-trigger').forEach(button => {
         button.addEventListener('click', () => {
             const content = button.nextElementSibling;

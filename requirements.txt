@@ -9,3 +9,6 @@ requests
 PyGithub
 Flask-CORS
 Authlib
+Flask-Login
+APScheduler
+croniter

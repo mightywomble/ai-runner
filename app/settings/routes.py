@@ -35,12 +35,13 @@ def settings_page():
         settings_keys = [
             'gemini_api_key', 'chatgpt_api_key', 'github_api_key', 'github_repo',
             'google_client_id', 'google_client_secret', 'discord_webhook',
-            'email_server', 'enable_login_debug'
+            'smtp_server', 'smtp_port', 'smtp_use_tls', 'smtp_sender_email',
+            'smtp_username', 'smtp_password', 'enable_login_debug'
         ]
         try:
             for key in settings_keys:
-                if key == 'enable_login_debug':
-                    value = 'true' if 'enable_login_debug' in request.form else 'false'
+                if key in ['smtp_use_tls', 'enable_login_debug']:
+                    value = 'true' if key in request.form else 'false'
                 else:
                     value = request.form.get(key, '')
 
@@ -69,7 +70,8 @@ def settings_page():
     settings_from_db = Setting.query.all()
     app_config = {setting.key: setting.value for setting in settings_from_db}
     
-    # Ensure boolean is correctly interpreted for the checkbox
+    # Ensure booleans are correctly interpreted for checkboxes
     app_config['enable_login_debug'] = app_config.get('enable_login_debug') == 'true'
+    app_config['smtp_use_tls'] = app_config.get('smtp_use_tls') == 'true'
 
     return render_template('settings/settings.html', title='Application Settings', app_config=app_config)
