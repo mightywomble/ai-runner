@@ -64,9 +64,13 @@
                 </button>
             </div>
             <nav class="flex-1 px-4 py-4 space-y-2">
-                <a href="{{ url_for('main.index') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'main' in request.endpoint else '' }}">
+                <a href="{{ url_for('main.index') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'main.index' in request.endpoint else '' }}">
                     <i class="fas fa-home fa-fw mr-3"></i>
                     <span class="sidebar-text">Home</span>
+                </a>
+                <a href="{{ url_for('api.docs') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'api' in request.endpoint else '' }}">
+                    <i class="fas fa-code fa-fw mr-3"></i>
+                    <span class="sidebar-text">API</span>
                 </a>
                 <a href="{{ url_for('scripts.scripts_list') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'scripts' in request.endpoint else '' }}">
                     <i class="fas fa-scroll fa-fw mr-3"></i>
@@ -79,10 +83,6 @@
                  <a href="{{ url_for('hosts.hosts_page') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'hosts' in request.endpoint else '' }}">
                     <i class="fas fa-server fa-fw mr-3"></i>
                     <span class="sidebar-text">Hosts</span>
-                </a>
-                <a href="#" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link">
-                    <i class="fas fa-chart-line fa-fw mr-3"></i>
-                    <span class="sidebar-text">Dashboard</span>
                 </a>
             </nav>
             <div class="px-4 py-4 border-t border-base-300">
