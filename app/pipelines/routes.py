@@ -1,8 +1,8 @@
 from flask import render_template, flash, request, jsonify, redirect, url_for
+from flask_login import current_user
 from . import bp
 from app import db
-from app.models import Host, Script, Pipeline
-from config import Config
+from app.models import Host, Script, Pipeline, Setting
 from app.utils import get_repo_scripts_recursive, get_script_icon
 from github import Github, UnknownObjectException
 import yaml
@@ -11,11 +11,13 @@ import json
 import google.generativeai as genai
 import openai
 import requests
+from app.notifications import send_email # Import the new send_email function
 
 def _get_ai_analysis(prompt_text, ai_provider=None):
     """Helper function to get analysis from the configured AI provider."""
-    app_config = Config.get_app_config() or {}
-    # Use the passed provider, or fall back to the config
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
+    
     if not ai_provider:
         ai_provider = app_config.get('ai_provider', 'gemini')
     
@@ -42,7 +44,11 @@ def pipeline_canvas():
     
     github_scripts = []
     github_pipelines = []
-    app_config = Config.get_app_config() or {}
+    
+    # Fetch settings from the database
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
+    
     github_token = app_config.get('github_api_key')
     repo_name = app_config.get('github_repo')
 
@@ -71,7 +77,6 @@ def pipeline_canvas():
                         'path': content_file.path
                     })
                 else:
-                    # It's a script, so try to get its content.
                     try:
                         content = content_file.decoded_content.decode('utf-8')
                         github_scripts.append({
@@ -81,12 +86,14 @@ def pipeline_canvas():
                             'content': content
                         })
                     except (UnicodeDecodeError, Exception):
-                        # Skip binary files or files with other decoding issues.
                         continue
         except Exception as e:
             flash(f"Could not get GitHub content: {e}", "error")
 
-    notifications = { 'discord': bool(app_config.get('discord_webhook')), 'email': bool(app_config.get('email_server')) }
+    notifications = { 
+        'discord': bool(app_config.get('discord_webhook')), 
+        'email': bool(app_config.get('smtp_server')) 
+    }
 
     return render_template('pipelines/pipelines.html', title='Pipeline Builder', hosts=hosts, local_scripts=local_scripts, github_scripts=github_scripts, saved_pipelines=saved_pipelines, github_pipelines=github_pipelines, notifications=notifications)
 
@@ -94,26 +101,20 @@ def pipeline_canvas():
 def save_pipeline():
     data = request.get_json()
     name = data.get('name')
-    # The frontend is sending 'yaml' and 'graph'.
-    # We will store the 'graph' (which is a Python object/dict from JSON.parse on frontend)
-    # into the 'definition' column of the Pipeline model.
     graph = data.get('graph') 
 
-    if not name or not graph: # Validate essential data
+    if not name or not graph:
         return jsonify({'success': False, 'error': 'Missing pipeline name or graph data.'}), 400
     
-    # Check if a pipeline with this name already exists
     existing_pipeline = Pipeline.query.filter_by(name=name).first()
     if existing_pipeline:
-        # Update existing pipeline: Store the graph JSON in the 'definition' column
-        existing_pipeline.definition = json.dumps(graph) # Corrected: Use 'definition' column
+        existing_pipeline.definition = json.dumps(graph)
         pipeline_id = existing_pipeline.id
         message = f'Pipeline "{name}" updated.'
     else:
-        # Create new pipeline: Store the graph JSON in the 'definition' column
-        new_pipeline = Pipeline(name=name, definition=json.dumps(graph)) # Corrected: Use 'definition' column
+        new_pipeline = Pipeline(name=name, definition=json.dumps(graph))
         db.session.add(new_pipeline)
-        db.session.flush() # To get the ID before committing
+        db.session.flush()
         pipeline_id = new_pipeline.id
         message = f'Pipeline "{name}" saved.'
 
@@ -131,8 +132,7 @@ def run_pipeline(pipeline_id):
     ai_provider = data.get('ai_provider', 'gemini')
     
     pipeline = Pipeline.query.get_or_404(pipeline_id)
-    # Load graph from the 'definition' column
-    graph = json.loads(pipeline.definition) # Corrected: Load from 'definition'
+    graph = json.loads(pipeline.definition)
     nodes = graph['nodes']
     connections = graph['connections']
 
@@ -143,7 +143,7 @@ def run_pipeline(pipeline_id):
         if conn['from'] in adj and conn['to'] in in_degree:
             adj[conn['from']].append(conn['to'])
             in_degree[conn['to']] += 1
-
+    
     queue = [node_id for node_id in nodes if in_degree[node_id] == 0]
     sorted_order = []
     while queue:
@@ -161,7 +161,6 @@ def run_pipeline(pipeline_id):
     execution_results = []
     context = {} 
     
-    # Find a default host to use if no explicit connection is made
     default_host_node_id = next((nid for nid, n in nodes.items() if n.get('type') == 'host'), None)
     default_host_node = nodes.get(default_host_node_id) if default_host_node_id else None
 
@@ -171,16 +170,11 @@ def run_pipeline(pipeline_id):
         step_type = node['type']
         
         if step_type == 'host':
-            continue # Hosts are targets, not executable steps
+            continue
 
         if step_type == 'script':
-            # Find an explicit host connection first
             explicit_connection = next((c for c in connections if c['to'] == node_id and nodes.get(c['from'], {}).get('type') == 'host'), None)
-            host_node = nodes.get(explicit_connection['from']) if explicit_connection else None
-            
-            # If no explicit host, use the default one for the pipeline
-            if not host_node:
-                host_node = default_host_node
+            host_node = nodes.get(explicit_connection['from']) if explicit_connection else default_host_node
 
             if not host_node:
                 execution_results.append({'step_name': step_name, 'success': False, 'output': '', 'error': 'No host connected to this script, and no default host found in pipeline.'})
@@ -227,7 +221,8 @@ def run_pipeline(pipeline_id):
                 execution_results.append({'step_name': step_name, 'success': not analysis.get('error'), 'output': analysis.get('output', ''), 'error': analysis.get('error', '')})
             
             elif node['name'] == 'Notify Discord':
-                app_config = Config.get_app_config() or {}
+                settings_list = Setting.query.all()
+                app_config = {s.key: s.value for s in settings_list}
                 webhook_url = app_config.get('discord_webhook')
                 if not webhook_url:
                     execution_results.append({'step_name': step_name, 'success': False, 'output': '', 'error': 'Discord webhook not configured.'})
@@ -243,6 +238,27 @@ def run_pipeline(pipeline_id):
                     execution_results.append({'step_name': step_name, 'success': True, 'output': 'Discord notification sent.', 'error': ''})
                 except Exception as e:
                     execution_results.append({'step_name': step_name, 'success': False, 'output': '', 'error': str(e)})
+            
+            elif node['name'] == 'Send Email':
+                recipient = node.get('data', {}).get('recipient', current_user.email)
+                subject = f"Fysseree AIOps Pipeline Report: {pipeline.name}"
+                body = f"""
+                <html><body>
+                <h2>Pipeline Execution Report</h2>
+                <p><strong>Pipeline:</strong> {pipeline.name}</p>
+                <hr>
+                <h3>Last Script Executed:</h3>
+                <pre><code>{context.get('last_script', 'N/A')}</code></pre>
+                <h3>Output:</h3>
+                <pre><code>{context.get('last_output', 'N/A')}</code></pre>
+                <h3>Error:</h3>
+                <pre><code>{context.get('last_error', 'N/A')}</code></pre>
+                <h3>AI Analysis:</h3>
+                <p>{context.get('last_analysis', 'N/A').replace('\n', '<br>')}</p>
+                </body></html>
+                """
+                success, message = send_email(recipient, subject, body)
+                execution_results.append({'step_name': step_name, 'success': success, 'output': message, 'error': '' if success else message})
     
     return jsonify({'results': execution_results})
 
@@ -252,7 +268,10 @@ def dry_run_yaml():
     yaml_content = data.get('yaml')
     ai_provider = data.get('ai_provider')
     if not yaml_content or not ai_provider: return jsonify({'error': 'Missing YAML content or AI provider.'}), 400
-    app_config = Config.get_app_config() or {}
+    
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
+    
     analysis_prompt = f"You are a helpful DevOps assistant. Analyze the following pipeline YAML. Explain what the pipeline does, what each job is responsible for, and point out any potential issues or improvements. Use 'HEADING: ' to mark section titles.\n\nYAML:\n```yaml\n{yaml_content}\n```"
     try:
         if ai_provider == 'gemini':
@@ -277,7 +296,6 @@ def load_pipeline(pipeline_id):
     pipeline = Pipeline.query.get_or_404(pipeline_id)
     
     yaml_output = ""
-    # Use pipeline.definition to load the graph data and then dump it as YAML
     if pipeline.definition:
         try:
             definition_data = json.loads(pipeline.definition)
@@ -285,11 +303,10 @@ def load_pipeline(pipeline_id):
         except json.JSONDecodeError:
             yaml_output = "# Error: Invalid JSON in definition column, cannot generate YAML."
 
-
     return jsonify({
         'name': pipeline.name,
-        'yaml': yaml_output, # Use the generated YAML
-        'graph': json.loads(pipeline.definition) # Corrected: Load graph from 'definition'
+        'yaml': yaml_output,
+        'graph': json.loads(pipeline.definition)
     })
 
 @bp.route('/delete/<int:pipeline_id>', methods=['POST'])
@@ -306,7 +323,9 @@ def delete_pipeline(pipeline_id):
 
 @bp.route('/push-to-github/<int:pipeline_id>', methods=['POST'])
 def push_pipeline_to_github(pipeline_id):
-    app_config = Config.get_app_config() or {}
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
+    
     github_token = app_config.get('github_api_key')
     repo_name = app_config.get('github_repo')
     if not github_token or not repo_name:
@@ -315,7 +334,6 @@ def push_pipeline_to_github(pipeline_id):
     
     pipeline = Pipeline.query.get_or_404(pipeline_id)
     
-    # Generate YAML content from pipeline.definition
     pipeline_yaml_content = ""
     if pipeline.definition:
         try:
@@ -333,10 +351,10 @@ def push_pipeline_to_github(pipeline_id):
         
         try:
             contents = repo.get_contents(file_path, ref="dev")
-            repo.update_file(contents.path, commit_message, pipeline_yaml_content, contents.sha, branch="dev") # Use generated YAML
+            repo.update_file(contents.path, commit_message, pipeline_yaml_content, contents.sha, branch="dev")
             flash(f'Pipeline "{pipeline.name}" updated in GitHub dev branch.', 'success')
         except UnknownObjectException:
-            repo.create_file(file_path, commit_message, pipeline_yaml_content, branch="dev") # Use generated YAML
+            repo.create_file(file_path, commit_message, pipeline_yaml_content, branch="dev")
             flash(f'Pipeline "{pipeline.name}" pushed to GitHub dev branch.', 'success')
     except Exception as e:
         flash(f"Failed to push to GitHub: {e}", "error")
@@ -346,17 +364,15 @@ def push_pipeline_to_github(pipeline_id):
 def update_pipeline(pipeline_id):
     data = request.get_json()
     name = data.get('name')
-    # The frontend is sending 'yaml' and 'graph'.
-    # We will store the 'graph' (JSON object) into the 'definition' column.
     graph = data.get('graph') 
     
-    if not name or not graph: # Validate essential data
+    if not name or not graph:
         return jsonify({'success': False, 'error': 'Missing pipeline name or graph data.'}), 400
     
     try:
         pipeline = Pipeline.query.get_or_404(pipeline_id)
         pipeline.name = name
-        pipeline.definition = json.dumps(graph) # Corrected: Use 'definition' column
+        pipeline.definition = json.dumps(graph)
         
         db.session.commit()
         return jsonify({'success': True, 'message': f'Pipeline "{name}" updated.', 'pipeline_id': pipeline_id})
