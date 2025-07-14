@@ -4,6 +4,7 @@ from app import db
 from app.models import User, Group
 from . import bp
 import json # For handling permissions JSON
+import functools # Import functools for @functools.wraps
 
 # Helper decorator for permission checking
 def permission_required(feature, access_level):
@@ -17,8 +18,6 @@ def permission_required(feature, access_level):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
-
-import functools # Import functools for @functools.wraps
 
 @bp.route('/')
 @bp.route('/list') # Both /users/ and /users/list will show the list
@@ -105,6 +104,31 @@ def delete_user(user_id):
         flash(f'Error deleting user: {e}', 'error')
     return redirect(url_for('users.users_list'))
 
+@bp.route('/users/<int:user_id>/generate_api_key', methods=['POST'])
+@login_required
+@permission_required('users', 'full')
+def generate_api_key(user_id):
+    user = User.query.get_or_404(user_id)
+    new_key = user.generate_api_key()
+    db.session.commit()
+    groups = Group.query.all()
+    # Re-render the edit page, passing the new key to be displayed in a modal
+    return render_template('users/edit_user.html', 
+                           title='Edit User', 
+                           user=user, 
+                           groups=groups,
+                           new_api_key=new_key)
+
+@bp.route('/users/<int:user_id>/revoke_api_key', methods=['POST'])
+@login_required
+@permission_required('users', 'full')
+def revoke_api_key(user_id):
+    user = User.query.get_or_404(user_id)
+    user.revoke_api_key()
+    db.session.commit()
+    flash(f'API Key for {user.username} has been revoked.', 'info')
+    return redirect(url_for('users.edit_user', user_id=user_id))
+
 @bp.route('/groups/add', methods=['GET', 'POST'])
 @login_required
 @permission_required('groups', 'full') # Requires 'full' access to 'groups' feature
@@ -121,11 +145,10 @@ def add_group():
 
         new_group = Group(name=name)
         
-        # Collect permissions from form
         permissions_data = {}
-        features = ['hosts', 'scripts', 'pipelines', 'users', 'settings', 'groups'] # Define all features
+        features = ['hosts', 'scripts', 'pipelines', 'users', 'settings', 'groups']
         for feature in features:
-            permissions_data[feature] = request.form.get(f'permission_{feature}', 'none') # Default to 'none'
+            permissions_data[feature] = request.form.get(f'permission_{feature}', 'none')
         new_group.set_permissions(permissions_data)
 
         db.session.add(new_group)
@@ -137,7 +160,6 @@ def add_group():
             db.session.rollback()
             flash(f'Error adding group: {e}', 'error')
     
-    # Define features and their access levels for the template
     features_access_levels = {
         'hosts': ['none', 'view', 'full'],
         'scripts': ['none', 'view', 'full'],
@@ -151,7 +173,7 @@ def add_group():
 
 @bp.route('/groups/edit/<int:group_id>', methods=['GET', 'POST'])
 @login_required
-@permission_required('groups', 'full') # Requires 'full' access to 'groups' feature
+@permission_required('groups', 'full')
 def edit_group(group_id):
     group = Group.query.get_or_404(group_id)
     if request.method == 'POST':
@@ -160,9 +182,8 @@ def edit_group(group_id):
             flash('Group name is required.', 'error')
             return redirect(url_for('users.edit_group', group_id=group.id))
 
-        # Collect permissions from form
         permissions_data = {}
-        features = ['hosts', 'scripts', 'pipelines', 'users', 'settings', 'groups'] # Define all features
+        features = ['hosts', 'scripts', 'pipelines', 'users', 'settings', 'groups']
         for feature in features:
             permissions_data[feature] = request.form.get(f'permission_{feature}', 'none')
         group.set_permissions(permissions_data)
@@ -175,7 +196,6 @@ def edit_group(group_id):
             db.session.rollback()
             flash(f'Error updating group: {e}', 'error')
     
-    # Define features and their access levels for the template
     features_access_levels = {
         'hosts': ['none', 'view', 'full'],
         'scripts': ['none', 'view', 'full'],
@@ -184,7 +204,6 @@ def edit_group(group_id):
         'settings': ['none', 'view', 'full'],
         'groups': ['none', 'view', 'full']
     }
-    # Pass current permissions to the template
     current_permissions = group.get_permissions()
     return render_template('users/edit_group.html', 
                            title='Edit Group', 
@@ -194,7 +213,7 @@ def edit_group(group_id):
 
 @bp.route('/groups/delete/<int:group_id>', methods=['POST'])
 @login_required
-@permission_required('groups', 'full') # Requires 'full' access to 'groups' feature
+@permission_required('groups', 'full')
 def delete_group(group_id):
     group = Group.query.get_or_404(group_id)
     if group.users.count() > 0:
@@ -208,4 +227,3 @@ def delete_group(group_id):
         db.session.rollback()
         flash(f'Error deleting group: {e}', 'error')
     return redirect(url_for('users.users_list'))
-

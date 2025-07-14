@@ -1,115 +1,68 @@
-# Fysseree AIOps: Your Intelligent DevOps Assistant
+# Fysseree AIOps v1.0.0 - Initial Release 🎉
 
-## Summary of App
+**Release Date:** July 14, 2025
 
-Fysseree AIOps is a web-based application designed to streamline DevOps operations by integrating AI-powered script generation, execution, and analysis with host management and pipeline automation. It provides a centralized platform for managing infrastructure tasks, automating workflows, and leveraging artificial intelligence to enhance efficiency and reduce manual effort.
+We are thrilled to announce the first official release of **Fysseree AIOps**, your all-in-one solution for intelligent DevOps and system administration. This version brings together a powerful suite of tools designed to automate workflows, manage infrastructure, and leverage AI to enhance operational efficiency.
 
-## Meaning of App Name
+## Overview
 
-The name "Fysseree AIOps" signifies the core functionality of the application: "Fysseree" (meaning "intelligence" or "knowledge" in some contexts) combined with "AIOps" (Artificial Intelligence for IT Operations). It's a platform that **runs** various scripts and automated tasks, heavily leveraging **Artificial Intelligence** (AI) to assist in generating, analyzing, and executing these operations, implying an intelligent agent that executes commands and workflows to optimize IT operations.
+Fysseree AIOps is a web-based platform that empowers engineers to generate scripts using natural language, manage remote hosts, build complex automation pipelines, and handle administrative tasks like user management and data backups with ease. This initial release lays the foundation for a robust AIOps platform, now complete with a full REST API for programmatic access.
 
-## Purpose of App
+## ✨ Key Features in v1.0.0
 
-The primary purpose of Fysseree AIOps is to empower DevOps engineers, system administrators, and developers with tools to:
+* **Full REST API**: Programmatically manage all application resources (hosts, scripts, pipelines, etc.) via a comprehensive REST API, enabling integration with other tools and CI/CD systems.
+* **Interactive API Documentation**: Explore and test API endpoints directly in the browser with an integrated, user-friendly API GUI.
+* **AI-Powered Script Generation**: Instantly create Bash, Python, or Ansible scripts from simple English prompts using either Gemini or ChatGPT.
+* **Centralized Host Management**: Add, edit, and manage your fleet of remote hosts. Test SSH connectivity directly from the UI.
+* **Role-Based Access Control (RBAC)**: Secure your application with a flexible user and group management system. Define granular permissions (`view`, `full`, `none`) for different features.
+* **API Key Management**: Generate and manage user-specific API keys for secure, authenticated access to the API.
+* **Local and Google SSO Authentication**: Support for both traditional email/password logins and seamless single sign-on with Google.
+* **Application Settings Management**: A centralized UI to configure all necessary API keys and application settings, with secrets masked for security.
+* **Backup & Restore System**:
+    * Create a complete backup of hosts, scripts, pipelines, and application settings into a single `.tar.gz` file.
+    * Download backups directly.
+    * Selectively restore components from a backup file with a safe preview step.
+* **Modern, Responsive UI**: A clean, dark-themed interface built with Tailwind CSS for a great user experience on any device.
 
--   **Generate scripts quickly:** Use natural language prompts to create Bash, Python, or Ansible scripts.
--   **Automate tasks:** Define and execute complex multi-step pipelines across multiple hosts.
--   **Manage infrastructure:** Centralize the management of remote hosts, including SSH credentials and operating system details.
--   **Analyze operations:** Get AI-driven insights into script dry runs and live execution outputs.
--   **Improve efficiency:** Reduce repetitive manual tasks and enhance the speed and reliability of deployments and system maintenance.
--   **Collaborate:** (Future potential) Provide a shared platform for teams to manage and execute operations.
+## 🚀 Getting Started
 
-## Feature List
-
--   **AI Script Generation:**
-    -   Generate Bash commands, Bash scripts, Python scripts, and Ansible playbooks from natural language descriptions.
-    -   Supports multiple AI providers (Gemini, ChatGPT).
--   **Script Management:**
-    -   Save generated scripts locally within the application.
-    -   Edit and delete saved scripts.
-    -   Push local scripts to a GitHub repository (e.g., `dev` branch) organized by script type.
-    -   Pull scripts from GitHub repositories.
--   **Host Management:**
-    -   Add, edit, and delete remote hosts with details like IP address, SSH username, OS type, and group.
-    -   Securely store host credentials (though for production, consider more robust secrets management).
--   **Script Execution:**
-    -   Run generated or saved scripts on selected remote hosts.
-    -   Option to run scripts with `sudo` privileges.
-    -   View live execution output and errors.
--   **AI Analysis:**
-    -   **Dry Run Analysis:** Get an AI-generated explanation of what a script will do before execution, including dependencies, expected outcomes, and potential issues.
-    -   **Execution Output Analysis:** Analyze the output and errors from live script executions to aid in debugging and understanding.
--   **Pipeline Builder:**
-    -   Visually construct multi-step pipelines by connecting hosts, scripts, and actions (like AI analysis, notifications).
-    -   Save and load pipeline definitions.
-    -   (Execution logic for pipelines is being developed/extended).
--   **Notifications:**
-    -   Integrate with external services like Discord for execution notifications.
--   **Settings:**
-    -   Configure AI API keys (Gemini, ChatGPT) and GitHub repository details.
--   **User Management (RBAC):**
-    -   Local user accounts with username and password.
-    -   Role-Based Access Control (RBAC) with Admin, Engineer, and Viewer groups.
-    -   Ability to add, edit, and delete users and groups.
-    -   Define feature-level permissions (Full Access, View Access, No Access) for each group.
-
-## Prerequisites Needed
-
-Before running the application, ensure you have the following:
-
--   **Python 3.8+**: The application is built with Python.
--   **pip**: Python package installer.
--   **Git**: For cloning the repository.
--   **SSH Access to Remote Hosts**: To run scripts on remote machines, you'll need SSH access configured (e.g., SSH keys or password-based access, though SSH keys are recommended for security).
--   **AI API Keys (Optional but Recommended):**
-    -   **Google Gemini API Key:** For AI script generation and analysis using Gemini models.
-    -   **OpenAI API Key (ChatGPT):** For AI script generation and analysis using ChatGPT models.
-    -   These keys are configured within the application's "Settings" page after launching.
--   **GitHub Personal Access Token (Optional but Recommended):**
-    -   If you plan to push/pull scripts and pipelines from GitHub, you'll need a GitHub personal access token with appropriate repository permissions.
-    -   This token and the target repository name are configured within the application's "Settings" page.
--   **Discord Webhook URL (Optional):**
-    -   If you want to receive notifications via Discord. Configured in "Settings".
-
-## Install and First-Time Setup
-
-To install and set up Fysseree AIOps for the first time, follow these steps:
+To get your instance of Fysseree AIOps up and running, follow these simple steps:
 
 1.  **Clone the repository:**
     ```bash
-    git clone <repository_url>
+    git clone <your_repository_url>
     cd ai-runner
     ```
 
-2.  **Run the Initialization Script:**
-    The project includes a script to automate the entire setup process. First, make it executable:
+2.  **Run the automated setup script:**
+    This script handles everything from creating a virtual environment to setting up the database and creating the first admin user.
     ```bash
     chmod +x init-app.sh
-    ```
-    Then, run the script:
-    ```bash
     ./init-app.sh
     ```
-    This script will:
-    - Create a Python virtual environment (`venv`).
-    - Install all required dependencies from `requirements.txt`.
-    - Initialize the database and run migrations.
-    - Create an `admin` user and prompt you to set a password.
 
-## How to Run the App
-
-After the initial setup is complete, follow these steps to run the application:
-
-1.  **Activate the virtual environment:**
-    (You need to do this every time you open a new terminal for this project)
+3.  **Start the application:**
     ```bash
     source venv/bin/activate
-    ```
-
-2.  **Start the web server:**
-    ```bash
     python3 run.py
     ```
 
-You can now access the application in your web browser at **http://127.0.0.1:5000**. Log in with the `admin` username and the password you set during setup.
+Your application will be available at `http://127.0.0.1:5000`. Log in with the `admin` user and the password you set during the setup script.
+
+## Known Issues
+
+* The visual pipeline builder is present in the UI but the execution logic is still under development.
+* Host credentials (passwords) are stored directly in the database. For production environments, integration with a dedicated secrets manager like HashiCorp Vault is recommended for future versions.
+
+## What's Next?
+
+We're just getting started! Here's a look at what we're planning for future releases:
+* Full execution logic for the pipeline builder.
+* Enhanced notification options.
+* An operational dashboard with key metrics.
+* Integration with more third-party services.
+
+---
+
+Thank you for using Fysseree AIOps. We welcome your feedback and contributions!
 

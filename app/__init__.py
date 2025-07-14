@@ -100,6 +100,9 @@ def create_app(config_class=Config):
     from .backup import bp as backup_bp
     app.register_blueprint(backup_bp, url_prefix='/backup')
 
+    from .api import bp as api_bp
+    app.register_blueprint(api_bp, url_prefix='/api')
+
 
     # Register CLI commands
     from app.cli import register_cli_commands
