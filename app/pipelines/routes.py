@@ -1,5 +1,5 @@
 from flask import render_template, flash, request, jsonify, redirect, url_for
-from flask_login import current_user
+from flask_login import current_user, login_required
 from . import bp
 from app import db
 from app.models import Host, Script, Pipeline, Setting
@@ -37,11 +37,15 @@ def _get_ai_analysis(prompt_text, ai_provider=None):
         return {"error": str(e)}
 
 @bp.route('/')
+@login_required
 def pipeline_canvas():
     hosts = Host.query.order_by(Host.name).all()
     local_scripts = Script.query.order_by(Script.name).all()
-    saved_pipelines = Pipeline.query.order_by(Pipeline.name).all()
     
+    # Fetch and format saved pipelines to include ID in the name
+    saved_pipelines_query = Pipeline.query.order_by(Pipeline.name).all()
+    saved_pipelines = [{'id': p.id, 'name': f"ID: {p.id} - {p.name}"} for p in saved_pipelines_query]
+
     github_scripts = []
     github_pipelines = []
     
@@ -98,6 +102,7 @@ def pipeline_canvas():
     return render_template('pipelines/pipelines.html', title='Pipeline Builder', hosts=hosts, local_scripts=local_scripts, github_scripts=github_scripts, saved_pipelines=saved_pipelines, github_pipelines=github_pipelines, notifications=notifications)
 
 @bp.route('/save', methods=['POST'])
+@login_required
 def save_pipeline():
     data = request.get_json()
     name = data.get('name')
@@ -126,6 +131,7 @@ def save_pipeline():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bp.route('/run/<int:pipeline_id>', methods=['POST'])
+@login_required
 def run_pipeline(pipeline_id):
     data = request.get_json()
     use_sudo = data.get('use_sudo', False)
@@ -270,6 +276,7 @@ def run_pipeline(pipeline_id):
     return jsonify({'results': execution_results})
 
 @bp.route('/dry-run-yaml', methods=['POST'])
+@login_required
 def dry_run_yaml():
     data = request.get_json()
     yaml_content = data.get('yaml')
@@ -299,6 +306,7 @@ def dry_run_yaml():
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/load/<int:pipeline_id>', methods=['GET'])
+@login_required
 def load_pipeline(pipeline_id):
     pipeline = Pipeline.query.get_or_404(pipeline_id)
     
@@ -317,6 +325,7 @@ def load_pipeline(pipeline_id):
     })
 
 @bp.route('/delete/<int:pipeline_id>', methods=['POST'])
+@login_required
 def delete_pipeline(pipeline_id):
     pipeline = Pipeline.query.get_or_404(pipeline_id)
     try:
@@ -329,6 +338,7 @@ def delete_pipeline(pipeline_id):
     return redirect(url_for('pipelines.pipeline_canvas'))
 
 @bp.route('/push-to-github/<int:pipeline_id>', methods=['POST'])
+@login_required
 def push_pipeline_to_github(pipeline_id):
     settings_list = Setting.query.all()
     app_config = {s.key: s.value for s in settings_list}
@@ -368,6 +378,7 @@ def push_pipeline_to_github(pipeline_id):
     return redirect(url_for('pipelines.pipeline_canvas'))
 
 @bp.route('/pipelines/<int:pipeline_id>/update', methods=['POST'])
+@login_required
 def update_pipeline(pipeline_id):
     data = request.get_json()
     name = data.get('name')

@@ -8,6 +8,7 @@ from authlib.integrations.flask_client import OAuth
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy import inspect
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -59,8 +60,8 @@ def resync_scheduler_jobs(app):
     """
     with app.app_context():
         from app.models import ScheduledJob
-        from sqlalchemy import inspect
-
+        
+        # Check if the table exists before querying to prevent errors on initial setup
         inspector = inspect(db.engine)
         if not inspector.has_table('scheduled_job'):
              print("INFO: 'scheduled_job' table not found, skipping scheduler sync. This is normal during initial db setup.")
@@ -96,11 +97,12 @@ def create_app(config_class=Config):
     oauth.init_app(app)
 
     # Initialize and start the scheduler
-    # Use the renamed scheduler object
-    if not bg_scheduler.running:
-        bg_scheduler.start()
-        # Resync jobs from DB after scheduler starts
-        resync_scheduler_jobs(app)
+    # Using with app.app_context() is best practice here
+    with app.app_context():
+        if not bg_scheduler.running:
+            bg_scheduler.start()
+            # Resync jobs from DB after scheduler starts
+            resync_scheduler_jobs(app)
 
 
     # User loader function for Flask-Login
@@ -153,6 +155,11 @@ def create_app(config_class=Config):
 
     from .scheduler import bp as scheduler_bp
     app.register_blueprint(scheduler_bp, url_prefix='/scheduler')
+
+    # --- Register the new Zabbix Blueprint ---
+    from .api.zabbix import zabbix_bp
+    app.register_blueprint(zabbix_bp, url_prefix='/api/zabbix')
+    # -----------------------------------------
 
 
     # Register CLI commands

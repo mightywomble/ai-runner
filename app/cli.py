@@ -1,7 +1,7 @@
 import click
+import getpass
 from app import db
 from app.models import User, Group
-from werkzeug.security import generate_password_hash
 
 def register_cli_commands(app):
     """Register custom CLI commands with the Flask app."""
@@ -17,53 +17,78 @@ def register_cli_commands(app):
     def create_admin(username, password):
         """Creates an initial Admin user and group."""
         with app.app_context():
-            # 1. Ensure Admin group exists
             admin_group = Group.query.filter_by(name='Admin').first()
             if not admin_group:
                 click.echo("Admin group not found, creating it...")
                 admin_group = Group(name='Admin')
-                # Define default full permissions for Admin
                 admin_group.set_permissions({
-                    "hosts": "full", 
-                    "scripts": "full", 
-                    "pipelines": "full", 
-                    "users": "full", 
-                    "settings": "full",
-                    "groups": "full" # Added permissions for group management
+                    "hosts": "full", "scripts": "full", "pipelines": "full", 
+                    "users": "full", "settings": "full", "groups": "full"
                 })
                 db.session.add(admin_group)
                 db.session.commit()
-                click.echo(f"Admin group '{admin_group.name}' created with ID: {admin_group.id}")
-            else:
-                click.echo(f"Admin group '{admin_group.name}' already exists with ID: {admin_group.id}")
-
-            # 2. Check if user already exists
+                click.echo(f"Admin group '{admin_group.name}' created.")
+            
             existing_user = User.query.filter_by(username=username).first()
             if existing_user:
                 click.echo(f"User '{username}' already exists. Updating password and assigning to Admin group...")
                 existing_user.set_password(password)
-                existing_user.group = admin_group # Assign to Admin group
+                existing_user.group = admin_group
                 db.session.commit()
                 click.echo(f"Password for user '{username}' updated and assigned to '{admin_group.name}' group.")
             else:
-                # 3. Create the new Admin user
                 click.echo(f"Creating new Admin user '{username}'...")
+                # Also generate an API key for the admin user
                 new_user = User(username=username, email=f"{username}@fysseree.local", group=admin_group)
                 new_user.set_password(password)
+                new_user.generate_api_key() 
                 db.session.add(new_user)
                 db.session.commit()
                 click.echo(f"Admin user '{username}' created successfully and assigned to '{admin_group.name}' group.")
 
-            click.echo("Initial Admin setup complete.")
+    @user.command('create-user')
+    @click.argument('username')
+    def create_user(username):
+        """Creates a regular user with an API key."""
+        if User.query.filter_by(username=username).first():
+            click.echo(f'Error: User {username} already exists.')
+            return
+        password = getpass.getpass('Enter password: ')
+        confirm_password = getpass.getpass('Confirm password: ')
+        if password != confirm_password:
+            click.echo('Error: Passwords do not match.')
+            return
+        new_user = User(username=username, email=f"{username}@fysseree.local")
+        new_user.set_password(password)
+        new_user.generate_api_key() # Crucially, generate the API key
+        db.session.add(new_user)
+        db.session.commit()
+        click.echo(f'User {username} created successfully.')
 
-    # You can add other user management commands here later, e.g.,
-    # @user.command('list')
-    # def list_users():
-    #     """Lists all users."""
-    #     with app.app_context():
-    #         users = User.query.all()
-    #         for user in users:
-    #             click.echo(f"ID: {user.id}, Username: {user.username}, Group: {user.group.name if user.group else 'None'}")
+    @user.command('list-users')
+    def list_users():
+        """Lists all users and their API keys."""
+        users = User.query.all()
+        if not users:
+            click.echo("No users found.")
+            return
+        click.echo("{:<20} {:<45}".format("Username", "API Key"))
+        click.echo("-" * 65)
+        for user in users:
+            click.echo("{:<20} {:<45}".format(user.username, user.api_key or "N/A"))
+
+    @user.command('show-key')
+    @click.argument('username')
+    def show_key(username):
+        """Shows the API key for a specific user."""
+        user = User.query.filter_by(username=username).first()
+        if user:
+            if user.api_key:
+                click.echo(f"API Key for {username}: {user.api_key}")
+            else:
+                click.echo(f"User {username} does not have an API key.")
+        else:
+            click.echo(f"User {username} not found.")
 
     @app.cli.group()
     def group():
@@ -76,20 +101,12 @@ def register_cli_commands(app):
         with app.app_context():
             default_groups_data = {
                 'Engineer': {
-                    "hosts": "full", 
-                    "scripts": "full", 
-                    "pipelines": "full", 
-                    "users": "none", 
-                    "settings": "none",
-                    "groups": "none"
+                    "hosts": "full", "scripts": "full", "pipelines": "full", 
+                    "users": "none", "settings": "none", "groups": "none"
                 },
                 'Viewer': {
-                    "hosts": "view", 
-                    "scripts": "view", 
-                    "pipelines": "view", 
-                    "users": "none", 
-                    "settings": "none",
-                    "groups": "none"
+                    "hosts": "view", "scripts": "view", "pipelines": "view", 
+                    "users": "none", "settings": "none", "groups": "none"
                 }
             }
 
@@ -104,4 +121,3 @@ def register_cli_commands(app):
                     click.echo(f"Group '{group_name}' already exists.")
             db.session.commit()
             click.echo("Default groups setup complete.")
-

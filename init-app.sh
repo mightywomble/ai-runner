@@ -25,6 +25,9 @@ echo "Virtual environment activated."
 # 2. Set Flask app environment variable
 export FLASK_APP="$FLASK_APP_NAME"
 
+
+pip3 install -r requirements.txt
+
 # 3. Handle Database Migrations
 print_message "Setting up the database..."
 
