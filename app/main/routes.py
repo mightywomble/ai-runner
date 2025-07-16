@@ -3,7 +3,7 @@ from flask_login import login_required, current_user # Import login_required and
 from . import bp
 from config import Config
 from app import db
-from app.models import Host, Script
+from app.models import Host, Script, Setting # Import Setting model
 import google.generativeai as genai
 import openai
 import paramiko
@@ -25,7 +25,11 @@ def generate_script():
     script_type = data.get('script_type')
     ai_provider = data.get('ai_provider')
     if not prompt or not script_type or not ai_provider: return jsonify({'error': 'Missing required data.'}), 400
-    app_config = Config.get_app_config() or {}
+    
+    # Load settings from the database
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
+    
     full_prompt = f"Generate a {script_type} script that does the following: {prompt}. The script should be complete, correct, and ready to run. Only output the code itself, with no explanation or markdown formatting."
     try:
         if ai_provider == 'gemini':
@@ -52,7 +56,11 @@ def dry_run():
     script = data.get('script')
     ai_provider = data.get('ai_provider')
     if not script or not ai_provider: return jsonify({'error': 'Missing script or AI provider.'}), 400
-    app_config = Config.get_app_config() or {}
+    
+    # Load settings from the database
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
+
     dry_run_prompt = f"You are a helpful Linux assistant. Analyze the following script and explain what it will do when run on an Ubuntu server. Use 'HEADING: ' to mark section titles like 'Executive Summary', 'Script Breakdown', 'Expected Output', etc. Describe the expected output and any potential side effects or files that will be created or modified.\n\nScript:\n```\n{script}\n```"
     try:
         if ai_provider == 'gemini':
@@ -117,7 +125,11 @@ def analyze_output():
         analysis_prompt = f"The following script failed to execute. Analyze the script and the error message to determine the cause and suggest troubleshooting steps. Use 'HEADING: ' to mark section titles.\n\nScript:\n```\n{script}\n```\n\nError:\n```\n{error}\n```"
     else:
         analysis_prompt = f"Analyze the output of the following script. Provide a summary of what the output means. Use 'HEADING: ' to mark section titles.\n\nScript:\n```\n{script}\n```\n\nOutput:\n```\n{output}\n```"
-    app_config = Config.get_app_config() or {}
+    
+    # Load settings from the database
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
+
     try:
         if ai_provider == 'gemini':
             api_key = app_config.get('gemini_api_key')
@@ -162,7 +174,10 @@ def save_script():
 def test_ai_provider():
     data = request.get_json()
     provider = data.get('provider')
-    app_config = Config.get_app_config() or {}
+    
+    # Load settings from the database
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
 
     if not provider:
         return jsonify({'success': False, 'error': 'No provider specified.'}), 400
