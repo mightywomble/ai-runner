@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
-from . import bp # Import bp from app/scripts/__init__.py
-from ..models import Script
+from . import bp
+from ..models import Script, Setting # MODIFIED: Added Setting model import
 from .. import db
-from config import Config
+# from config import Config # MODIFIED: Removed unused import
 from github import Github, UnknownObjectException
 import base64
 import google.generativeai as genai
@@ -19,64 +19,52 @@ def permission_required(feature, access_level):
         def decorated_function(*args, **kwargs):
             if not current_user.can(feature, access_level):
                 flash(f'You do not have {access_level} access to {feature}.', 'error')
-                return redirect(url_for('main.index')) # Redirect to home or an unauthorized page
+                return redirect(url_for('main.index'))
             return f(*args, **kwargs)
         return decorated_function
     return decorator
 
-
 @bp.route('/save', methods=['POST'])
 @login_required
-@permission_required('scripts', 'full') # Assuming full permission to save scripts
+@permission_required('scripts', 'full')
 def save_script():
     try:
         data = request.get_json()
-
-        if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
-
+        if not data: return jsonify({'success': False, 'error': 'No data provided'}), 400
         name = data.get('name')
         content = data.get('content')
-        script_type = data.get('script_type', 'Bash Script') # Get script_type, default to 'Bash Script'
-
-        if not name or not content:
-            return jsonify({'success': False, 'error': 'Name and content are required'}), 400
-
-        # Check if script with this name already exists
+        script_type = data.get('script_type', 'Bash Script')
+        if not name or not content: return jsonify({'success': False, 'error': 'Name and content are required'}), 400
         existing_script = Script.query.filter_by(name=name).first()
         if existing_script:
-            # If exists, update it (including script_type)
             existing_script.content = content
             existing_script.script_type = script_type
             message = f'Script "{name}" updated successfully.'
         else:
-            # Create new script
-            script = Script(name=name, content=content, script_type=script_type) # Pass script_type
+            script = Script(name=name, content=content, script_type=script_type)
             db.session.add(script)
             message = f'Script "{name}" saved successfully.'
-
         db.session.commit()
         return jsonify({'success': True, 'message': message})
-
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bp.route('/')
-@permission_required('scripts', 'view') # Protect the scripts list page
+@permission_required('scripts', 'view')
 def scripts_list():
     local_scripts = Script.query.order_by(Script.name).all()
-    # GitHub scripts will be loaded asynchronously by JavaScript
-    return render_template('scripts/scripts.html',
-                           title='Scripts',
-                           local_scripts=local_scripts)
+    return render_template('scripts/scripts.html', title='Scripts', local_scripts=local_scripts)
 
 @bp.route('/github-scripts', methods=['GET'])
 @login_required
-@permission_required('scripts', 'view') # Protect this endpoint
+@permission_required('scripts', 'view')
 def get_github_scripts():
     github_scripts = []
-    app_config = Config.get_app_config() or {}
+    # MODIFIED: Load settings from the database
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
+    
     github_token = app_config.get('github_api_key')
     repo_name = app_config.get('github_repo')
 
@@ -90,21 +78,21 @@ def get_github_scripts():
         except Exception as e:
             return jsonify({'error': f"Could not connect to GitHub: {str(e)}"}), 500
     else:
-        return jsonify({'message': 'GitHub settings are not configured.'}), 200 # Not an error, just no scripts
+        return jsonify({'message': 'GitHub settings are not configured.'}), 200
 
     return jsonify({'github_scripts': github_scripts})
 
 
 @bp.route('/edit/<int:script_id>', methods=['GET', 'POST'])
 @login_required
-@permission_required('scripts', 'full') # Assuming full permission to edit scripts
+@permission_required('scripts', 'full')
 def edit_script(script_id):
     script_to_edit = Script.query.get_or_404(script_id)
     if request.method == 'POST':
         script_to_edit.name = request.form['name']
         script_to_edit.content = request.form['content']
         script_to_edit.description = request.form.get('description')
-        script_to_edit.script_type = request.form.get('script_type', 'Bash Script') # Get script_type from form
+        script_to_edit.script_type = request.form.get('script_type', 'Bash Script')
         try:
             db.session.commit()
             flash(f'Script "{script_to_edit.name}" has been updated.', 'success')
@@ -112,17 +100,12 @@ def edit_script(script_id):
             db.session.rollback()
             flash(f'Error updating script: {e}', 'error')
         return redirect(url_for('scripts.scripts_list'))
-
-    # Pass script_type to the template for display
-    return render_template('scripts/edit_script.html',
-                           title=f'Edit {script_to_edit.name}',
-                           script=script_to_edit,
-                           script_types=['Bash Command', 'Bash Script', 'Ansible Playbook', 'Python Script']) # Pass available types
+    return render_template('scripts/edit_script.html', title=f'Edit {script_to_edit.name}', script=script_to_edit, script_types=['Bash Command', 'Bash Script', 'Ansible Playbook', 'Python Script'])
 
 
 @bp.route('/delete/<int:script_id>', methods=['POST'])
 @login_required
-@permission_required('scripts', 'full') # Assuming full permission to delete scripts
+@permission_required('scripts', 'full')
 def delete_script(script_id):
     script_to_delete = Script.query.get_or_404(script_id)
     try:
@@ -136,9 +119,12 @@ def delete_script(script_id):
 
 @bp.route('/push-to-github/<int:script_id>', methods=['POST'])
 @login_required
-@permission_required('scripts', 'full') # Assuming full permission to push to GitHub
+@permission_required('scripts', 'full')
 def push_to_github(script_id):
-    app_config = Config.get_app_config() or {}
+    # MODIFIED: Load settings from the database
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
+
     github_token = app_config.get('github_api_key')
     repo_name = app_config.get('github_repo')
 
@@ -147,34 +133,15 @@ def push_to_github(script_id):
         return redirect(url_for('scripts.scripts_list'))
 
     script = Script.query.get_or_404(script_id)
-
     try:
         g = Github(github_token)
         repo = g.get_repo(repo_name)
-
-        # Determine directory based on script_type
-        # Convert script_type to a suitable directory name (e.g., "Bash Script" -> "bash-scripts")
-        dir_name_map = {
-            'Bash Command': 'bash-commands',
-            'Bash Script': 'bash-scripts',
-            'Ansible Playbook': 'ansible-playbooks',
-            'Python Script': 'python-scripts'
-        }
-        # Use .get() with a default in case a script_type isn't mapped
+        dir_name_map = {'Bash Command': 'bash-commands', 'Bash Script': 'bash-scripts', 'Ansible Playbook': 'ansible-playbooks', 'Python Script': 'python-scripts'}
         dir_name = dir_name_map.get(script.script_type, 'other-scripts')
-
-        # Add appropriate file extension based on script_type
-        file_extension_map = {
-            'Bash Command': '.sh',
-            'Bash Script': '.sh',
-            'Ansible Playbook': '.yml',
-            'Python Script': '.py'
-        }
+        file_extension_map = {'Bash Command': '.sh', 'Bash Script': '.sh', 'Ansible Playbook': '.yml', 'Python Script': '.py'}
         file_extension = file_extension_map.get(script.script_type, '')
-
-        file_path = f"{dir_name}/{script.name}{file_extension}" # Use script.name directly
+        file_path = f"{dir_name}/{script.name}{file_extension}"
         commit_message = f"Add/update script: {script.name}"
-
         try:
             contents = repo.get_contents(file_path, ref="dev")
             repo.update_file(contents.path, commit_message, script.content, contents.sha, branch="dev")
@@ -182,20 +149,21 @@ def push_to_github(script_id):
         except UnknownObjectException:
             repo.create_file(file_path, commit_message, script.content, branch="dev")
             flash(f'Script "{script.name}" pushed to GitHub dev branch.', 'success')
-
     except Exception as e:
         flash(f"Failed to push to GitHub: {e}", "error")
-
     return redirect(url_for('scripts.scripts_list'))
 
 @bp.route('/get-github-script-content', methods=['POST'])
 @login_required
-@permission_required('scripts', 'view') # Assuming view permission to get GitHub script content
+@permission_required('scripts', 'view')
 def get_github_script_content():
     data = request.get_json()
     path = data.get('path')
 
-    app_config = Config.get_app_config() or {}
+    # MODIFIED: Load settings from the database
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
+
     github_token = app_config.get('github_api_key')
     repo_name = app_config.get('github_repo')
 
@@ -213,13 +181,17 @@ def get_github_script_content():
 
 @bp.route('/analyze-script', methods=['POST'])
 @login_required
-@permission_required('scripts', 'view') # Assuming view permission to analyze scripts
+@permission_required('scripts', 'view')
 def analyze_script():
     data = request.get_json()
     script = data.get('script')
     ai_provider = data.get('ai_provider')
     if not script or not ai_provider: return jsonify({'error': 'Missing script or AI provider.'}), 400
-    app_config = Config.get_app_config() or {}
+    
+    # MODIFIED: Load settings from the database
+    settings_list = Setting.query.all()
+    app_config = {s.key: s.value for s in settings_list}
+    
     analysis_prompt = f"You are a helpful DevOps assistant. Analyze the following script. Use 'HEADING: ' to mark section titles for 'Summary', 'Dependencies', 'Expected Outcome', and 'Potential Issues'.\n\nScript:\n```\n{script}\n```"
     try:
         if ai_provider == 'gemini':
