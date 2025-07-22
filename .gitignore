@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Virtual environment
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# Instance folder (often contains secrets and instance-specific configs)
+instance/
+
+# Database file
+app.db
+
+# Configuration files that may contain secrets
+config.yaml
+*.ini
+*.env
+
+# IDE and editor folders
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Flask-Migrate
+migrations/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+config.yaml

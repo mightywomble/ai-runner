@@ -1,0 +1,761 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col h-[85vh] bg-gray-900 text-white">
+    <!-- Top section with builder -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Left Panel: Components -->
+        <div id="components-panel" class="w-1/4 bg-base-200 p-4 overflow-y-auto border-r border-base-300">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold">Components</h2>
+                <button id="new-pipeline-btn" class="text-sm text-accent hover:underline" title="Clear the canvas and start a new pipeline">New Pipeline</button>
+            </div>
+            
+            <!-- Hosts Section -->
+            <div>
+                <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                    <span><i class="fas fa-server fa-fw mr-2"></i>Hosts</span>
+                    <i class="fas fa-chevron-up transform transition-transform"></i>
+                </button>
+                <div class="collapsible-content pl-4 pt-2 space-y-2">
+                    {% for host in hosts %}
+                        <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="host" data-name="{{ host.name }}">
+                            <i class="fas fa-server fa-fw mr-2"></i>{{ host.name }}
+                        </div>
+                    {% else %}
+                        <p class="text-xs text-gray-500">No hosts found.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Local Scripts Section -->
+            <div class="mt-4">
+                <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                    <span><i class="fas fa-scroll fa-fw mr-2 text-yellow-400"></i>Local Scripts</span>
+                    <i class="fas fa-chevron-up transform transition-transform"></i>
+                </button>
+                <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
+                    {% for script in local_scripts %}
+                        <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="script" data-name="{{ script.name }}" data-script-content="{{ script.content }}">
+                            <i class="fas fa-scroll fa-fw mr-2"></i>{{ script.name }}
+                        </div>
+                    {% else %}
+                        <p class="text-xs text-gray-500">No local scripts.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- GitHub Scripts Section -->
+            <div class="mt-4">
+                <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                    <span><i class="fab fa-github fa-fw mr-2 text-blue-400"></i>GitHub Scripts</span>
+                    <i class="fas fa-chevron-up transform transition-transform"></i>
+                </button>
+                <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
+                     {% for script in github_scripts %}
+                        <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 truncate draggable-item" title="{{ script.path }}" data-type="script" data-name="{{ script.path }}" data-script-content="{{ script.content | e }}">
+                            <i class="{{ script.icon }} fa-fw mr-2"></i>{{ script.name }}
+                        </div>
+                    {% else %}
+                        <p class="text-xs text-gray-500">No GitHub scripts.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Actions Section -->
+            <div class="mt-4">
+                <button class="w-full text-left flex justify-between items-center py-2 text-white font-semibold collapsible-trigger">
+                    <span><i class="fas fa-bolt fa-fw mr-2"></i>Actions</span>
+                    <i class="fas fa-chevron-up transform transition-transform"></i>
+                </button>
+                <div class="collapsible-content pl-4 pt-2 space-y-2 hidden">
+                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="AI Analysis">
+                        <i class="fas fa-robot fa-fw mr-2 text-purple-400"></i>AI Analysis
+                    </div>
+                    {% if notifications.discord %}
+                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="Notify Discord">
+                        <i class="fab fa-discord fa-fw mr-2 text-indigo-400"></i>Notify Discord
+                    </div>
+                    {% endif %}
+                     {% if notifications.email %}
+                    <div class="p-2 bg-base-100 rounded-md cursor-grab border border-base-300 draggable-item" data-type="action" data-name="Send Email">
+                        <i class="fas fa-envelope fa-fw mr-2 text-teal-400"></i>Send Email
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Panel: Canvas -->
+        <div id="pipeline-canvas" class="flex-1 bg-base-100 p-4 relative">
+            <div id="canvas-placeholder" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-600 text-center pointer-events-none">
+                <i class="fas fa-mouse-pointer text-4xl mb-2"></i>
+                <p>Drag and drop components here</p>
+            </div>
+        </div>
+
+        <!-- Right Panel: Tabs for YAML and Saved Pipelines -->
+        <div class="w-1/3 bg-base-200 p-4 flex flex-col border-l border-base-300">
+            <!-- Pipeline Name and Save Button -->
+            <div class="flex items-center justify-between mb-4 gap-2">
+                <div class="flex items-center space-x-2 flex-grow">
+                    <span class="text-sm text-gray-400">Name:</span>
+                    <input type="text" id="pipeline-name" class="input input-sm input-bordered w-full bg-base-100" placeholder="Enter pipeline name...">
+                </div>
+                <button id="pipeline-save-btn" class="btn btn-sm btn-primary"><i class="fas fa-save mr-2"></i>Save</button>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div id="tabs-container" class="flex border-b border-base-300 mb-4">
+                <button class="tab-btn py-2 px-4 text-white font-semibold border-b-2 border-accent" data-tab="yaml-panel">YAML</button>
+                <button class="tab-btn py-2 px-4 text-gray-400 font-semibold" data-tab="saved-panel">Saved</button>
+            </div>
+
+            <!-- YAML Panel -->
+            <div id="yaml-panel" class="tab-content flex-1 flex flex-col min-h-0">
+                <h2 class="text-lg font-bold mb-2">Pipeline YAML</h2>
+                <div class="flex-1 bg-base-100 rounded-md p-2 font-mono text-xs border border-base-300 overflow-auto min-h-0">
+                    <pre><code id="yaml-output"># YAML will be generated here...</code></pre>
+                </div>
+                <div class="mt-4 grid grid-cols-2 gap-2">
+                    <button id="pipeline-dry-run-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-play mr-2"></i>Dry Run</button>
+                    <button id="pipeline-run-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-rocket mr-2"></i>Run</button>
+                    <button id="pipeline-sudo-run-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 col-span-2 mt-2"><i class="fas fa-user-shield mr-2"></i>Run with Sudo</button>
+                </div>
+                 <div id="pipeline-status" class="text-sm text-gray-500 mt-2" style="display: none;"></div>
+            </div>
+
+            <!-- Saved Pipelines Panel -->
+            <div id="saved-panel" class="tab-content hidden flex-1 flex flex-col overflow-y-auto">
+                <h2 class="text-lg font-bold mb-4">Saved Pipelines</h2>
+                <!-- Local Pipelines -->
+                <h3 class="font-semibold text-gray-400 text-sm mb-2">Local</h3>
+                <ul id="local-pipelines-list" class="space-y-2 mb-4">
+                    {% for p in saved_pipelines %}
+                    <li class="flex items-center justify-between bg-base-100 border border-base-300 p-2 rounded-md">
+                        <span class="font-mono text-sm truncate" title="{{ p.name }}">{{ p.name }}</span>
+                        <div class="flex items-center space-x-2">
+                            <form method="POST" action="{{ url_for('pipelines.push_pipeline_to_github', pipeline_id=p.id) }}" class="inline"><button type="submit" class="text-gray-400 hover:text-white" title="Push to GitHub"><i class="fab fa-github"></i></button></form>
+                            <button class="edit-pipeline-btn text-gray-400 hover:text-white" data-id="{{ p.id }}" title="Load to Canvas"><i class="fas fa-edit"></i></button>
+                            <form method="POST" action="{{ url_for('pipelines.delete_pipeline', pipeline_id=p.id) }}" onsubmit="return confirm('Delete this pipeline?');" class="inline"><button type="submit" class="text-gray-400 hover:text-red-500" title="Delete"><i class="fas fa-trash"></i></button></form>
+                            <button class="run-pipeline-btn text-gray-400 hover:text-white" data-id="{{ p.id }}" title="Run"><i class="fas fa-play-circle text-green-500"></i></button>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li><p class="text-xs text-gray-500">No local pipelines.</p></li>
+                    {% endfor %}
+                </ul>
+                <!-- GitHub Pipelines -->
+                <h3 class="font-semibold text-gray-400 text-sm mb-2">GitHub (main branch)</h3>
+                <ul class="space-y-2">
+                    {% for p in github_pipelines %}
+                    <li class="flex items-center justify-between bg-base-100 border border-base-300 p-2 rounded-md">
+                        <span class="font-mono text-sm truncate" title="{{ p.path }}">{{ p.name }}</span>
+                        <div class="flex items-center space-x-2">
+                             <button class="text-gray-400 hover:text-white" title="AI Analysis"><i class="fas fa-search-plus"></i></button>
+                             <button class="text-gray-400 hover:text-white" title="Run"><i class="fas fa-play-circle text-green-500"></i></button>
+                        </div>
+                    </li>
+                    {% else %}
+                     <li><p class="text-xs text-gray-500">No GitHub pipelines found.</p></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Execution Output Container -->
+    <div id="run-output-container" class="hidden relative z-10 bg-base-200 border-t-4 border-accent shadow-lg rounded-t-lg mx-6">
+        <div class="p-4 border-b border-base-300 flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-white">Pipeline Execution Output</h2>
+            <button id="clear-run-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="p-6">
+            <div id="progress-bar-container" class="w-full bg-base-100 rounded-full h-6 mb-4 flex overflow-hidden"></div>
+            <div id="run-output-content" class="font-mono text-sm max-h-64 overflow-y-auto"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div id="save-pipeline-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-md border border-base-300">
+        <div class="p-6 border-b border-base-300"><h3 class="text-lg font-semibold text-white">Save Pipeline To Run</h3></div>
+        <div class="p-6">
+            <label for="modal-pipeline-name" class="block text-sm font-medium text-gray-400 mb-2">Pipeline Name</label>
+            <input type="text" id="modal-pipeline-name" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 text-white" placeholder="e.g., deploy-web-app">
+        </div>
+        <div class="p-6 bg-base-100 border-t border-base-300 flex justify-end space-x-4">
+            <button id="cancel-save-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
+            <button id="confirm-save-run-btn" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">Save and Run</button>
+        </div>
+    </div>
+</div>
+<div id="output-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-4xl border border-base-300 flex flex-col" style="max-height: 90vh;">
+        <div class="p-6 border-b border-base-300 flex justify-between items-center">
+            <h3 id="output-modal-title" class="text-lg font-semibold text-white">AI Analysis</h3>
+            <button id="close-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div id="output-modal-content" class="p-6 overflow-y-auto flex-1 font-mono text-sm"></div>
+    </div>
+</div>
+<div id="notes-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-lg border border-base-300">
+        <div class="p-6 border-b border-base-300"><h3 class="text-lg font-semibold text-white">Add Notes</h3></div>
+        <div class="p-6">
+            <textarea id="notes-textarea" rows="5" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 text-white" placeholder="Enter your notes here..."></textarea>
+        </div>
+        <div class="p-6 bg-base-100 border-t border-base-300 flex justify-end space-x-4">
+            <button id="cancel-notes-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
+            <button id="confirm-notes-btn" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">Save Notes</button>
+        </div>
+    </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leader-line-new/leader-line.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Element Cache ---
+    const canvas = document.getElementById('pipeline-canvas');
+    const placeholder = document.getElementById('canvas-placeholder');
+    const yamlOutput = document.getElementById('yaml-output');
+    const pipelineNameInput = document.getElementById('pipeline-name');
+    const saveModal = document.getElementById('save-pipeline-modal');
+    const modalPipelineNameInput = document.getElementById('modal-pipeline-name');
+    const outputModal = document.getElementById('output-modal');
+    const notesModal = document.getElementById('notes-modal');
+    const notesTextarea = document.getElementById('notes-textarea');
+    const runOutputContainer = document.getElementById('run-output-container');
+    const runOutputContent = document.getElementById('run-output-content');
+    const progressBarContainer = document.getElementById('progress-bar-container');
+    const statusEl = document.getElementById('pipeline-status');
+
+    // --- State Variables ---
+    let pipeline = { nodes: {}, connections: [] };
+    let lines = [];
+    let nodeIdCounter = 1;
+    let currentPipelineId = null;
+    let hasUnsavedChanges = false;
+    let selectedOutput = null;
+    let activeNotesNodeId = null;
+    let useSudo = false;
+
+    // --- Core Functions ---
+    function resetCanvas() {
+        if (hasUnsavedChanges && !confirm('You have unsaved changes that will be lost. Are you sure?')) {
+            return;
+        }
+        canvas.innerHTML = ''; // Clear canvas content
+        canvas.appendChild(placeholder); // Restore placeholder
+        placeholder.classList.remove('hidden');
+
+        lines.forEach(l => l.remove());
+        lines = [];
+        pipeline = { nodes: {}, connections: [] };
+        currentPipelineId = null;
+        nodeIdCounter = 1;
+        pipelineNameInput.value = '';
+        updateYaml();
+        markSaved();
+    }
+
+    function updateYaml() {
+        let yaml = `name: ${pipelineNameInput.value || 'New Pipeline'}\n\non: [workflow_dispatch]\n\njobs:\n`;
+        if (Object.keys(pipeline.nodes).length === 0) {
+            yamlOutput.textContent = '# Drag components to the canvas to begin...';
+            return;
+        }
+
+        const allNodes = Object.values(pipeline.nodes);
+        const defaultHostNode = allNodes.find(n => n.type === 'host');
+        const defaultHostName = defaultHostNode ? defaultHostNode.name : 'ubuntu-latest';
+
+        allNodes.forEach(node => {
+            if (node.type === 'host') {
+                return;
+            }
+
+            if (node.notes) {
+                node.notes.split('\n').forEach(line => { yaml += `  # ${line}\n`; });
+            }
+            const jobName = node.name.replace(/[.\s/]+/g, '_').toLowerCase() + `_${node.id.replace('node-','')}`;
+            yaml += `  ${jobName}:\n`;
+
+            const dependencies = pipeline.connections
+                .filter(c => c.to === node.id)
+                .map(c => {
+                    const fromNode = pipeline.nodes[c.from];
+                    if (!fromNode || fromNode.type === 'host') return null;
+                    return fromNode.name.replace(/[.\s/]+/g, '_').toLowerCase() + `_${fromNode.id.replace('node-','')}`;
+                })
+                .filter(Boolean);
+
+            if (dependencies.length > 0) yaml += `    needs: [${dependencies.join(', ')}]\n`;
+            
+            const explicitHostNodeId = pipeline.connections.find(c => c.to === node.id && pipeline.nodes[c.from]?.type === 'host')?.from;
+            const hostName = explicitHostNodeId && pipeline.nodes[explicitHostNodeId] ? pipeline.nodes[explicitHostNodeId].name : defaultHostName;
+            yaml += `    runs-on: ${hostName}\n`;
+            yaml += `    steps:\n      - name: ${node.name}\n`;
+
+            if (node.type === 'script' && node.content) {
+                yaml += `        run: |\n`;
+                node.content.split('\n').forEach(line => { yaml += `          ${line}\n`; });
+            } else if (node.type === 'action') {
+                yaml += `        uses: local/${node.name.toLowerCase().replace(/ /g, '-')}@v1\n`;
+            }
+        });
+        yamlOutput.textContent = yaml;
+    }
+
+    function deleteNode(nodeId) {
+        const nodeToRemove = pipeline.nodes[nodeId];
+        if (!nodeToRemove) return;
+
+        lines = lines.filter(line => {
+            const startNodeId = line.start.closest('.pipeline-node')?.id;
+            const endNodeId = line.end.closest('.pipeline-node')?.id;
+            const isConnected = startNodeId === nodeId || endNodeId === nodeId;
+            if (isConnected) line.remove();
+            return !isConnected;
+        });
+
+        pipeline.connections = pipeline.connections.filter(conn => conn.from !== nodeId && conn.to !== nodeId);
+        if (nodeToRemove.el) nodeToRemove.el.remove();
+        delete pipeline.nodes[nodeId];
+        
+        if (Object.keys(pipeline.nodes).length === 0) {
+            placeholder.classList.remove('hidden');
+        }
+        
+        updateYaml();
+        markUnsaved();
+    }
+
+    function createNode(type, name, x, y, content = '', notes = '', existingId = null) {
+        const nodeId = existingId || `node-${nodeIdCounter++}`;
+        const nodeEl = document.createElement('div');
+        nodeEl.id = nodeId;
+        nodeEl.className = 'pipeline-node absolute bg-base-200 border border-base-300 rounded-md p-3 shadow-lg flex items-center group';
+        nodeEl.style.left = `${x}px`;
+        nodeEl.style.top = `${y}px`;
+        nodeEl.style.width = '180px';
+        nodeEl.style.minHeight = '60px';
+        
+        nodeEl.innerHTML = `
+            <div class="connector-in absolute -left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full border-2 border-white cursor-crosshair hover:bg-blue-600"></div>
+            <div class="flex-1 px-2">
+                <div class="font-bold text-sm">${name}</div>
+                <div class="text-xs text-gray-500">${type}</div>
+            </div>
+            <div class="connector-out absolute -right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-green-500 rounded-full border-2 border-white cursor-crosshair hover:bg-green-600"></div>
+            <button class="notes-node absolute -top-2 -left-2 w-5 h-5 bg-yellow-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="Add Notes"><i class="fas fa-sticky-note fa-xs"></i></button>
+            <button class="delete-node absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity" title="Delete node">×</button>
+        `;
+        
+        canvas.appendChild(nodeEl);
+        
+        pipeline.nodes[nodeId] = { id: nodeId, type, name, content, notes, position: { left: x, top: y }, el: nodeEl };
+        
+        updateYaml();
+        return nodeEl;
+    }
+
+    function savePipeline() {
+        const pipelineName = pipelineNameInput.value.trim();
+        if (!pipelineName) {
+            alert('Please enter a pipeline name before saving.');
+            return Promise.reject('No pipeline name');
+        }
+        
+        const serializableNodes = {};
+        for (const nodeId in pipeline.nodes) {
+            const { el, ...rest } = pipeline.nodes[nodeId];
+            serializableNodes[nodeId] = rest;
+        }
+        
+        const payload = { 
+            name: pipelineName, 
+            yaml: yamlOutput.textContent, 
+            graph: { nodes: serializableNodes, connections: pipeline.connections } 
+        };
+        
+        const saveBtn = document.getElementById('pipeline-save-btn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+        
+        const url = currentPipelineId 
+            ? `{{ url_for('pipelines.update_pipeline', pipeline_id=0) }}`.replace('0', currentPipelineId)
+            : "{{ url_for('pipelines.save_pipeline') }}";
+        
+        return fetch(url, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                if (!currentPipelineId) currentPipelineId = data.pipeline_id;
+                markSaved();
+                updatePipelineStatus(`Pipeline "${pipelineName}" saved successfully!`, 'success');
+                return data;
+            } else {
+                updatePipelineStatus(`Error saving: ${data.error || 'Unknown error'}`, 'error');
+                throw new Error(data.error);
+            }
+        })
+        .catch(error => {
+            updatePipelineStatus('Failed to save pipeline.', 'error');
+            throw error;
+        })
+        .finally(() => {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save';
+        });
+    }
+
+    function loadPipeline(pipelineId) {
+        fetch(`{{ url_for('pipelines.load_pipeline', pipeline_id=0) }}`.replace('0', pipelineId))
+        .then(res => res.json())
+        .then(data => {
+            resetCanvas();
+            currentPipelineId = pipelineId;
+            pipelineNameInput.value = data.name;
+            
+            updatePipelineStatus(`Loaded pipeline: ${data.name}`, 'success');
+            placeholder.classList.add('hidden');
+            
+            const canvasRect = canvas.getBoundingClientRect();
+            let maxId = 0;
+            
+            let autoX = 50;
+            let autoY = 50;
+            const nodeWidth = 200;
+            const nodeHeight = 80;
+
+            Object.values(data.graph.nodes).forEach(nodeData => {
+                let pos = nodeData.position;
+                if (!pos || typeof pos.left === 'undefined' || typeof pos.top === 'undefined') {
+                    pos = { left: autoX, top: autoY };
+                    autoX += nodeWidth;
+                    if (autoX > canvasRect.width - nodeWidth) {
+                        autoX = 50;
+                        autoY += nodeHeight;
+                    }
+                }
+                createNode(nodeData.type, nodeData.name, pos.left, pos.top, nodeData.content || '', nodeData.notes || '', nodeData.id);
+                const numericId = parseInt(nodeData.id.replace('node-', ''));
+                if (!isNaN(numericId) && numericId > maxId) maxId = numericId;
+            });
+            
+            nodeIdCounter = maxId + 1;
+            
+            setTimeout(() => {
+                pipeline.connections = data.graph.connections;
+                data.graph.connections.forEach(conn => {
+                    const fromNodeEl = document.getElementById(conn.from);
+                    const toNodeEl = document.getElementById(conn.to);
+                    if(fromNodeEl && toNodeEl) {
+                         const line = new LeaderLine(fromNodeEl.querySelector('.connector-out'), toNodeEl.querySelector('.connector-in'), { color: '#2f81f7', size: 2, path: 'fluid', endPlug: 'arrow1' });
+                         lines.push(line);
+                    }
+                });
+                updateYaml();
+            }, 100);
+
+            markSaved();
+        })
+        .catch(error => {
+            console.error('Error loading pipeline:', error);
+            updatePipelineStatus('Failed to load pipeline.', 'error');
+        });
+    }
+
+    async function executePipeline(pipelineId, isSudo) {
+        runOutputContainer.classList.remove('hidden');
+        runOutputContent.innerHTML = '';
+        progressBarContainer.innerHTML = '';
+
+        const executableNodes = Object.values(pipeline.nodes).filter(n => n.type !== 'host');
+        executableNodes.forEach(node => {
+            const stepEl = document.createElement('div');
+            stepEl.id = `progress-${node.id}`;
+            stepEl.className = 'progress-step flex-1 bg-gray-500 text-white text-xs text-center p-1 transition-colors duration-500';
+            stepEl.textContent = node.name;
+            progressBarContainer.appendChild(stepEl);
+        });
+
+        try {
+            const aiProvider = document.getElementById('ai-provider').value;
+            const response = await fetch(`{{ url_for('pipelines.run_pipeline', pipeline_id=0) }}`.replace('0', pipelineId), { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ use_sudo: isSudo, ai_provider: aiProvider }) 
+            });
+            const data = await response.json();
+
+            if (data.error) {
+                runOutputContent.innerHTML = `<pre class="text-red-500">${data.error}</pre>`;
+                return;
+            }
+
+            for (const result of data.results) {
+                const correspondingNode = executableNodes.find(n => n.name === result.step_name);
+                if (!correspondingNode) continue;
+
+                const progressStep = document.getElementById(`progress-${correspondingNode.id}`);
+                
+                progressStep.classList.remove('bg-gray-500');
+                progressStep.classList.add('bg-orange-500');
+                progressStep.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i> ${correspondingNode.name}`;
+                
+                await new Promise(res => setTimeout(res, 500)); 
+
+                progressStep.classList.remove('bg-orange-500');
+                progressStep.classList.add(result.success ? 'bg-green-500' : 'bg-red-500');
+                progressStep.innerHTML = `<i class="fas ${result.success ? 'fa-check' : 'fa-times'} mr-1"></i> ${correspondingNode.name}`;
+
+                const resultDiv = document.createElement('div');
+                resultDiv.className = `mb-4 p-4 rounded-md border ${result.success ? 'border-green-500' : 'border-red-500'}`;
+                resultDiv.innerHTML = `<h4 class="font-bold text-white">${result.step_name}</h4><pre class="whitespace-pre-wrap">${result.output || result.error}</pre>`;
+                runOutputContent.appendChild(resultDiv);
+            }
+        } catch (error) {
+            runOutputContent.innerHTML = `<pre class="text-red-500">A client-side error occurred: ${error.message}</pre>`;
+        }
+    }
+
+    function handleRun(isSudo) {
+        useSudo = isSudo;
+        if (currentPipelineId && !hasUnsavedChanges) {
+            executePipeline(currentPipelineId, isSudo);
+        } else {
+            modalPipelineNameInput.value = pipelineNameInput.value;
+            showModal(saveModal);
+        }
+    }
+
+    function updatePipelineStatus(message, type = 'info') {
+        statusEl.textContent = message;
+        statusEl.className = `text-sm mt-2 ${type === 'success' ? 'text-green-500' : type === 'error' ? 'text-red-500' : 'text-gray-400'}`;
+        statusEl.style.display = 'block';
+        setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+    }
+
+    function markUnsaved() {
+        hasUnsavedChanges = true;
+        const saveBtn = document.getElementById('pipeline-save-btn');
+        saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save*';
+        saveBtn.classList.remove('btn-primary');
+        saveBtn.classList.add('btn-warning');
+    }
+
+    function markSaved() {
+        hasUnsavedChanges = false;
+        const saveBtn = document.getElementById('pipeline-save-btn');
+        saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save';
+        saveBtn.classList.remove('btn-warning');
+        saveBtn.classList.add('btn-primary');
+    }
+
+    function showModal(modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+    function hideModal(modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+    document.getElementById('new-pipeline-btn').addEventListener('click', resetCanvas);
+    document.getElementById('pipeline-save-btn').addEventListener('click', savePipeline);
+    pipelineNameInput.addEventListener('input', markUnsaved);
+
+    document.getElementById('tabs-container').addEventListener('click', (event) => {
+        const target = event.target.closest('.tab-btn');
+        if (!target) return;
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('border-accent', 'text-white');
+            btn.classList.add('text-gray-400');
+        });
+        target.classList.add('border-accent', 'text-white');
+        target.classList.remove('text-gray-400');
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+        document.getElementById(target.dataset.tab).classList.remove('hidden');
+    });
+
+    document.getElementById('pipeline-dry-run-btn').addEventListener('click', function() {
+        const yaml = yamlOutput.textContent;
+        if (yaml.startsWith('# Drag components')) {
+            alert('Please build a pipeline first.');
+            return;
+        }
+        outputModal.querySelector('#output-modal-title').textContent = 'Pipeline Dry Run Analysis';
+        const content = outputModal.querySelector('#output-modal-content');
+        content.innerHTML = '<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing pipeline...</div>';
+        showModal(outputModal);
+        const aiProvider = document.getElementById('ai-provider').value;
+        fetch("{{ url_for('pipelines.dry_run_yaml') }}", { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ yaml: yaml, ai_provider: aiProvider }) 
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) content.innerHTML = `<pre class="text-red-500">${data.error}</pre>`;
+            else content.innerHTML = `<pre class="whitespace-pre-wrap">${data.output}</pre>`;
+        }).catch(err => content.innerHTML = `<pre class="text-red-500">${err.message}</pre>`);
+    });
+    document.getElementById('pipeline-run-btn').addEventListener('click', () => handleRun(false));
+    document.getElementById('pipeline-sudo-run-btn').addEventListener('click', () => handleRun(true));
+
+    document.getElementById('cancel-save-btn').addEventListener('click', () => hideModal(saveModal));
+    document.getElementById('confirm-save-run-btn').addEventListener('click', () => {
+        const pipelineName = modalPipelineNameInput.value.trim();
+        if (!pipelineName) {
+            alert('Please enter a name for the pipeline.');
+            return;
+        }
+        pipelineNameInput.value = pipelineName;
+        savePipeline().then(data => {
+            if (data.success) {
+                hideModal(saveModal);
+                executePipeline(data.pipeline_id, useSudo);
+            }
+        });
+    });
+    document.getElementById('close-output-btn').addEventListener('click', () => hideModal(outputModal));
+    document.getElementById('clear-run-output-btn').addEventListener('click', () => {
+        runOutputContent.innerHTML = '';
+        progressBarContainer.innerHTML = '';
+        runOutputContainer.classList.add('hidden');
+    });
+    document.getElementById('cancel-notes-btn').addEventListener('click', () => hideModal(notesModal));
+    document.getElementById('confirm-notes-btn').addEventListener('click', () => {
+        if (activeNotesNodeId && pipeline.nodes[activeNotesNodeId]) {
+            pipeline.nodes[activeNotesNodeId].notes = notesTextarea.value;
+            updateYaml();
+            markUnsaved();
+        }
+        hideModal(notesModal);
+    });
+
+    document.addEventListener('click', e => {
+        const target = e.target;
+        const deleteBtn = target.closest('.delete-node');
+        const notesBtn = target.closest('.notes-node');
+        const editBtn = target.closest('.edit-pipeline-btn');
+        const runBtn = target.closest('.run-pipeline-btn');
+
+        if (deleteBtn) {
+            const nodeEl = deleteBtn.closest('.pipeline-node');
+            if (nodeEl) deleteNode(nodeEl.id);
+        } else if (notesBtn) {
+            const nodeEl = notesBtn.closest('.pipeline-node');
+            if(nodeEl) {
+                activeNotesNodeId = nodeEl.id;
+                notesTextarea.value = pipeline.nodes[nodeEl.id].notes || '';
+                showModal(notesModal);
+            }
+        } else if (editBtn) {
+            loadPipeline(editBtn.dataset.id);
+        } else if (runBtn) {
+            executePipeline(runBtn.dataset.id, false);
+        }
+    });
+
+    interact('.draggable-item').draggable({
+        listeners: {
+            start (event) {
+                const clone = event.target.cloneNode(true);
+                clone.classList.add('dragging-clone');
+                clone.style.position = 'absolute';
+                clone.style.zIndex = 1000;
+                const rect = event.target.getBoundingClientRect();
+                clone.style.left = `${rect.left}px`;
+                clone.style.top = `${rect.top}px`;
+                clone.style.width = `${rect.width}px`;
+                document.body.appendChild(clone);
+                event.interaction.clone = clone;
+            },
+            move (event) {
+                const clone = event.interaction.clone;
+                const x = (parseFloat(clone.getAttribute('data-x')) || 0) + event.dx;
+                const y = (parseFloat(clone.getAttribute('data-y')) || 0) + event.dy;
+                clone.style.transform = `translate(${x}px, ${y}px)`;
+                clone.setAttribute('data-x', x);
+                clone.setAttribute('data-y', y);
+            },
+            end (event) {
+                if (event.interaction.clone) event.interaction.clone.remove();
+            }
+        }
+    });
+
+    interact(canvas).dropzone({
+        accept: '.draggable-item',
+        ondrop: function (event) {
+            placeholder.classList.add('hidden');
+            const canvasRect = canvas.getBoundingClientRect();
+            const x = event.dragEvent.clientX - canvasRect.left;
+            const y = event.dragEvent.clientY - canvasRect.top;
+            createNode(event.relatedTarget.dataset.type, event.relatedTarget.dataset.name, x, y, event.relatedTarget.dataset.scriptContent);
+            markUnsaved();
+        }
+    });
+    
+    interact('.pipeline-node').draggable({
+        ignoreFrom: '.connector-in, .connector-out, .delete-node, .notes-node',
+        modifiers: [
+            interact.modifiers.restrictRect({
+                restriction: 'parent',
+                endOnly: true
+            })
+        ],
+        listeners: {
+            move(event) {
+                const target = event.target;
+                const x = (parseFloat(target.style.left) || 0) + event.dx;
+                const y = (parseFloat(target.style.top) || 0) + event.dy;
+                target.style.left = `${x}px`;
+                target.style.top = `${y}px`;
+                if (pipeline.nodes[target.id]) {
+                    pipeline.nodes[target.id].position = { left: x, top: y };
+                }
+                lines.forEach(line => line.position());
+            },
+            end() { markUnsaved(); }
+        }
+    });
+
+    document.addEventListener('mousedown', function(event) {
+        if (event.target.classList.contains('connector-out')) {
+            event.stopPropagation();
+            selectedOutput = event.target;
+        }
+    });
+
+    document.addEventListener('mouseup', function(event) {
+        if (selectedOutput && event.target.classList.contains('connector-in')) {
+            const fromNodeEl = selectedOutput.closest('.pipeline-node');
+            const toNodeEl = event.target.closest('.pipeline-node');
+            if (fromNodeEl.id !== toNodeEl.id) {
+                const line = new LeaderLine(fromNodeEl.querySelector('.connector-out'), event.target, { color: '#2f81f7', size: 2, path: 'fluid', endPlug: 'arrow1' });
+                lines.push(line);
+                pipeline.connections.push({ from: fromNodeEl.id, to: toNodeEl.id });
+                updateYaml();
+                markUnsaved();
+            }
+        }
+        selectedOutput = null;
+    });
+
+    document.querySelectorAll('.collapsible-trigger').forEach(button => {
+        button.addEventListener('click', () => {
+            const content = button.nextElementSibling;
+            const icon = button.querySelector('i.fa-chevron-up');
+            content.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        });
+    });
+    document.querySelector('.collapsible-trigger')?.click();
+});
+</script>
+{% endblock %}

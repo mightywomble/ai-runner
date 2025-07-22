@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- New Quick Start and Testing Section -->
+<div class="bg-base-200 border border-base-300 rounded-lg shadow-lg mb-8">
+    <div class="p-6 border-b border-base-300">
+        <h2 class="text-2xl font-semibold text-white flex items-center">
+            <i class="fas fa-rocket mr-3 text-accent"></i>
+            API Quick Start & Testing
+        </h2>
+        <p class="text-gray-400 mt-2">Select a user to populate the examples with their API key and test your connection.</p>
+    </div>
+    <div class="p-6">
+        <div class="mb-6">
+            <label for="user_api_key_selector" class="block text-sm font-medium text-gray-300 mb-2">Select User API Key:</label>
+            <select id="user_api_key_selector" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
+                <option value="">-- Select a user to authorize API --</option>
+                {% for user in users_with_keys %}
+                    <option value="{{ user.api_key }}">{{ user.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Code Examples -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Bash/cURL Example -->
+            <div>
+                <h3 class="text-lg font-semibold text-white mb-2">Bash (cURL)</h3>
+                <div class="bg-base-100 p-4 rounded-lg relative">
+                    <pre><code id="curl-example" class="text-gray-300 language-bash">curl -X GET "{{ request.host_url }}api/v1/hosts" \
+-H "X-API-Key: <YOUR_API_KEY>"</code></pre>
+                    <button class="absolute top-2 right-2 bg-base-300 hover:bg-accent text-white p-2 rounded-md text-xs" onclick="copyToClipboard('curl-example')">Copy</button>
+                </div>
+            </div>
+            <!-- Python Example -->
+            <div>
+                <h3 class="text-lg font-semibold text-white mb-2">Python 3 (requests)</h3>
+                <div class="bg-base-100 p-4 rounded-lg relative">
+                    <pre><code id="python-example" class="text-gray-300 language-python">import requests
+
+url = "{{ request.host_url }}api/v1/hosts"
+api_key = "<YOUR_API_KEY>"
+headers = {
+    "X-API-Key": api_key
+}
+response = requests.get(url, headers=headers)
+print(response.json())</code></pre>
+                    <button class="absolute top-2 right-2 bg-base-300 hover:bg-accent text-white p-2 rounded-md text-xs" onclick="copyToClipboard('python-example')">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Postman Instructions -->
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold text-white mb-2">Using with Postman</h3>
+            <div class="bg-base-100 p-4 rounded-lg text-gray-400 text-sm space-y-2">
+                <p>1. Create a new request (e.g., GET <code>{{ request.host_url }}api/v1/hosts</code>).</p>
+                <p>2. Go to the "Headers" tab.</p>
+                <p>3. Add a new header:</p>
+                <p class="ml-4">- In the "KEY" column, enter: <code>X-API-Key</code></p>
+                <p class="ml-4">- In the "VALUE" column, paste the API key for the user you want to authenticate as.</p>
+                <p>4. Send the request. You should see the API response.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Swagger UI Section -->
+<div class="bg-base-200 border border-base-300 rounded-lg shadow-lg">
+    <div class="p-6 border-b border-base-300">
+        <h2 class="text-2xl font-semibold text-white flex items-center">
+            <i class="fas fa-book-open mr-3 text-accent"></i>
+            Interactive API Reference
+        </h2>
+    </div>
+    <div class="p-6">
+        <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.11.0/swagger-ui.css">
+        <style>
+          /* Custom styles to make Swagger UI fit the dark theme */
+          .swagger-ui .topbar { display: none; }
+          .swagger-ui { filter: invert(0.9) hue-rotate(180deg); }
+          .swagger-ui .model-example, .swagger-ui .opblock-body, .swagger-ui .opblock-section-header, .swagger-ui .opblock-description-wrapper, .swagger-ui .response-col_description__inner, .swagger-ui .response-col_links__inner { filter: invert(1) hue-rotate(180deg); }
+          .swagger-ui .auth-wrapper .authorize.authorized { background-color: #2f81f7; }
+        </style>
+
+        <div id="swagger-ui"></div>
+    </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+<script>
+    // Swagger UI setup
+    window.onload = function() {
+        const ui = SwaggerUIBundle({
+            url: "{{ url_for('api.openapi_spec') }}",
+            dom_id: '#swagger-ui',
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIBundle.SwaggerUIStandalonePreset
+            ],
+            layout: "BaseLayout",
+            deepLinking: true
+        });
+        window.ui = ui;
+    };
+
+    // API Key selector logic
+    const apiKeySelector = document.getElementById('user_api_key_selector');
+    const curlExample = document.getElementById('curl-example');
+    const pythonExample = document.getElementById('python-example');
+
+    const originalCurlText = curlExample.textContent;
+    const originalPythonText = pythonExample.textContent;
+
+    apiKeySelector.addEventListener('change', (event) => {
+        const selectedKey = event.target.value;
+        const keyPlaceholder = "<YOUR_API_KEY>";
+        
+        if (selectedKey) {
+            // Update code examples
+            curlExample.textContent = originalCurlText.replace(keyPlaceholder, selectedKey);
+            pythonExample.textContent = originalPythonText.replace(keyPlaceholder, selectedKey);
+            
+            // Authorize Swagger UI for "Try it out" functionality
+            window.ui.preauthorizeApiKey("ApiKeyAuth", selectedKey);
+            alert('API Key set for interactive testing. You can now use the "Try it out" buttons below.');
+
+        } else {
+            // Clear code examples
+            curlExample.textContent = originalCurlText;
+            pythonExample.textContent = originalPythonText;
+
+            // Clear authorization in Swagger UI
+            window.ui.preauthorizeApiKey("ApiKeyAuth", false);
+        }
+    });
+
+    // Copy to clipboard function
+    function copyToClipboard(elementId) {
+        const codeElement = document.getElementById(elementId);
+        const text = codeElement.innerText;
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('Copied to clipboard!');
+    }
+</script>
+{% endblock %}

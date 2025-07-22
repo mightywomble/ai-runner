@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-base-200 border border-base-300 shadow-lg rounded-lg">
+        <div class="p-6 border-b border-base-300">
+            <h2 class="text-lg font-semibold text-white">Edit Host: {{ host.name }}</h2>
+        </div>
+        <form method="POST" action="{{ url_for('hosts.edit_host', host_id=host.id) }}" class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Group Selection -->
+                <div class="md:col-span-2">
+                    <label for="group_id" class="block text-sm font-medium text-gray-400 mb-2">Group</label>
+                    <select name="group_id" id="group_id" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
+                        <option value="">-- No Group --</option>
+                        {% for group in groups %}
+                        <option value="{{ group.id }}" {% if host.group_id == group.id %}selected{% endif %}>{{ group.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Other Host Fields -->
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-400 mb-2">Friendly Name</label>
+                    <input type="text" name="name" id="name" value="{{ host.name }}" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
+                </div>
+                <div>
+                    <label for="ip_address" class="block text-sm font-medium text-gray-400 mb-2">IP Address or Hostname</label>
+                    <input type="text" name="ip_address" id="ip_address" value="{{ host.ip_address }}" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
+                </div>
+                <div>
+                    <label for="os_type" class="block text-sm font-medium text-gray-400 mb-2">Operating System</label>
+                    <select name="os_type" id="os_type" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
+                        <option {% if host.os_type == 'Linux' %}selected{% endif %}>Linux</option>
+                        <option {% if host.os_type == 'Windows' %}selected{% endif %}>Windows</option>
+                        <option {% if host.os_type == 'MacOS' %}selected{% endif %}>MacOS</option>
+                    </select>
+                </div>
+                <div id="distro-field">
+                    <label for="distro" class="block text-sm font-medium text-gray-400 mb-2">Linux Distro</label>
+                    <select name="distro" id="distro" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
+                        {% for d in distros %}
+                        <option {% if host.distro == d %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="ssh_user" class="block text-sm font-medium text-gray-400 mb-2">SSH User</label>
+                    <input type="text" name="ssh_user" id="ssh_user" value="{{ host.ssh_user }}" required class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
+                </div>
+                <div>
+                    <label for="location" class="block text-sm font-medium text-gray-400 mb-2">Location</label>
+                    <input type="text" name="location" id="location" value="{{ host.location }}" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">
+                </div>
+                <div class="md:col-span-2">
+                    <label for="description" class="block text-sm font-medium text-gray-400 mb-2">Description</label>
+                    <textarea name="description" id="description" rows="3" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white">{{ host.description or '' }}</textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <a href="{{ url_for('hosts.hosts_page') }}" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-all duration-300">Cancel</a>
+                <button type="submit" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Toggles the visibility of the Distro dropdown based on the selected OS
+    function handleOsChange() {
+        const osType = document.getElementById('os_type').value;
+        const distroField = document.getElementById('distro-field');
+        if (osType === 'Linux') {
+            distroField.style.display = 'block';
+        } else {
+            distroField.style.display = 'none';
+        }
+    }
+    document.getElementById('os_type').addEventListener('change', handleOsChange);
+    handleOsChange(); // Run on page load
+</script>
+{% endblock %}

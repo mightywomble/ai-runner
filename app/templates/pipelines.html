@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex h-[75vh] bg-gray-900 text-white">
+    <!-- Left Panel: Draggable Items -->
+    <div class="w-1/4 bg-gray-800 p-4 overflow-y-auto">
+        <h2 class="text-lg font-bold mb-4">Components</h2>
+        <div>
+            <h3 class="font-semibold text-indigo-400 mb-2">Hosts</h3>
+            <div class="p-2 bg-gray-700 rounded-md mb-2 cursor-grab"><i class="fas fa-server mr-2"></i> web-server-01</div>
+            <div class="p-2 bg-gray-700 rounded-md mb-2 cursor-grab"><i class="fas fa-server mr-2"></i> db-server-01</div>
+            
+            <h3 class="font-semibold text-indigo-400 my-2">Scripts</h3>
+            <div class="p-2 bg-gray-700 rounded-md mb-2 cursor-grab"><i class="fas fa-scroll mr-2"></i> check_disk.sh</div>
+            <div class="p-2 bg-gray-700 rounded-md mb-2 cursor-grab"><i class="fab fa-python mr-2"></i> parse_logs.py</div>
+
+            <h3 class="font-semibold text-indigo-400 my-2">Actions</h3>
+            <div class="p-2 bg-gray-700 rounded-md mb-2 cursor-grab"><i class="fas fa-robot mr-2"></i> AI Analysis</div>
+            <div class="p-2 bg-gray-700 rounded-md mb-2 cursor-grab"><i class="fab fa-slack mr-2"></i> Notify Slack</div>
+        </div>
+    </div>
+
+    <!-- Middle Panel: Canvas -->
+    <div id="pipeline-canvas" class="flex-1 bg-gray-850 p-4 border-x border-gray-700 relative">
+        <!-- Canvas content goes here -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-600">
+            Drag and drop components here to build your pipeline
+        </div>
+    </div>
+
+    <!-- Right Panel: YAML Output & Controls -->
+    <div class="w-1/3 bg-gray-800 p-4 flex flex-col">
+        <h2 class="text-lg font-bold mb-4">Pipeline YAML</h2>
+        <div class="flex-1 bg-gray-900 rounded-md p-2 font-mono text-xs overflow-auto">
+            <pre><code id="yaml-output"># YAML will be generated here
+name: New Pipeline
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+            </code></pre>
+        </div>
+        <div class="mt-4 flex space-x-2">
+            <button class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 flex-1"><i class="fas fa-play mr-2"></i> Dry Run</button>
+            <button class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 flex-1"><i class="fas fa-rocket mr-2"></i> Run Pipeline</button>
+        </div>
+    </div>
+</div>
+<!-- Progress section would appear below when running -->
+{% endblock %}
+```css
+/* app/static/css/style.css */
+body {
+    background-color: #111827; /* bg-gray-900 */
+}
+
+/* For a slightly darker header */
+.bg-gray-850 {
+    background-color: #1F2937; /* A mix between gray-800 and gray-900 */
+}
+
+/* Custom scrollbar for a more modern look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+::-webkit-scrollbar-thumb {
+  background: #4f46e5;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4338ca;
+}
+```javascript
+// app/static/js/main.js
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('AI Ops Runner Initialized');
+
+    // Logic for collapsible headers (if you add them)
+    const collapsibles = document.querySelectorAll('[data-collapsible]');
+    collapsibles.forEach(button => {
+        button.addEventListener('click', () => {
+            const content = button.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
+    });
+
+    // Basic interactivity for the pipeline canvas (placeholder)
+    const canvas = document.getElementById('pipeline-canvas');
+    if (canvas) {
+        // In a real app, you'd use a library like interact.js or SortableJS
+        // to handle drag, drop, and connecting nodes.
+        console.log('Pipeline canvas found. Ready for D&D logic.');
+    }
+});

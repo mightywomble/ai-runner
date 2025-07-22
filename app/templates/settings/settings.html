@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold text-white mb-6">Application Settings</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="mb-4">
+                {% for category, message in messages %}
+                    <div class="p-3 rounded-md {% if category == 'error' %}bg-red-900 text-red-300{% elif category == 'info' %}bg-blue-900 text-blue-300{% elif category == 'success' %}bg-green-900 text-green-300{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="bg-base-200 p-6 rounded-lg shadow-lg border border-base-300">
+        <form method="POST" action="{{ url_for('settings.settings_page') }}">
+            <h2 class="text-xl font-semibold text-white mb-4">AI Provider Settings</h2>
+            <div class="mb-4">
+                <label for="gemini_api_key" class="block text-sm font-medium text-gray-400 mb-2">Gemini API Key</label>
+                <div class="relative">
+                    <input type="password" id="gemini_api_key" name="gemini_api_key"
+                           value="{{ app_config.get('gemini_api_key', '') }}"
+                           class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 pr-10 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                           placeholder="Enter your Gemini API Key">
+                    <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white" onclick="toggleVisibility('gemini_api_key', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="mb-6">
+                <label for="chatgpt_api_key" class="block text-sm font-medium text-gray-400 mb-2">ChatGPT API Key</label>
+                <div class="relative">
+                    <input type="password" id="chatgpt_api_key" name="chatgpt_api_key"
+                           value="{{ app_config.get('chatgpt_api_key', '') }}"
+                           class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 pr-10 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                           placeholder="Enter your ChatGPT API Key">
+                    <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white" onclick="toggleVisibility('chatgpt_api_key', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <h2 class="text-xl font-semibold text-white mb-4">GitHub Integration Settings</h2>
+            <div class="mb-4">
+                <label for="github_api_key" class="block text-sm font-medium text-gray-400 mb-2">GitHub Personal Access Token</label>
+                <div class="relative">
+                    <input type="password" id="github_api_key" name="github_api_key"
+                           value="{{ app_config.get('github_api_key', '') }}"
+                           class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 pr-10 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                           placeholder="Enter GitHub Personal Access Token">
+                    <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white" onclick="toggleVisibility('github_api_key', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="mb-6">
+                <label for="github_repo" class="block text-sm font-medium text-gray-400 mb-2">GitHub Repository (e.g., username/repo_name)</label>
+                <input type="text" id="github_repo" name="github_repo"
+                       value="{{ app_config.get('github_repo', '') }}"
+                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                       placeholder="e.g., myuser/my-devops-scripts">
+            </div>
+
+            <h2 class="text-xl font-semibold text-white mb-4">Google SSO Settings</h2>
+            <div class="mb-4 p-4 bg-base-100 rounded-md border border-base-300 text-sm text-gray-400">
+                <p class="mb-2">To configure Google SSO, you need to create an OAuth 2.0 Client ID in the Google API Console (<a href="https://console.developers.google.com/" target="_blank" class="text-accent hover:underline">console.developers.google.com</a>).</p>
+                <p class="mb-2">When creating your "Web application" OAuth client ID, ensure you add the following to the respective fields:</p>
+                <p class="font-semibold text-white mt-3">Authorised JavaScript origins:</p>
+                <pre class="bg-gray-800 p-2 rounded-md text-gray-300 overflow-x-auto"><code>{{ request.host_url | trim('/') }}</code></pre>
+                <p class="text-xs text-gray-500 mt-1 mb-3">Example: <code>http://localhost:5055</code> or <code>http://192.168.1.100:5055</code></p>
+                <p class="font-semibold text-white">Authorised Redirect URIs:</p>
+                <pre class="bg-gray-800 p-2 rounded-md text-gray-300 overflow-x-auto"><code>{{ url_for('auth.google_callback', _external=True) }}</code></pre>
+                <p class="text-xs text-gray-500 mt-1">Example: <code>http://localhost:5055/auth/google/callback</code> or <code>http://192.168.1.100:5055/auth/google/callback</code></p>
+            </div>
+            <div class="mb-4">
+                <label for="google_client_id" class="block text-sm font-medium text-gray-400 mb-2">Google Client ID</label>
+                <input type="text" id="google_client_id" name="google_client_id"
+                       value="{{ app_config.get('google_client_id', '') }}"
+                       class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                       placeholder="Enter your Google Client ID">
+            </div>
+            <div class="mb-6">
+                <label for="google_client_secret" class="block text-sm font-medium text-gray-400 mb-2">Google Client Secret</label>
+                <div class="relative">
+                    <input type="password" id="google_client_secret" name="google_client_secret"
+                           value="{{ app_config.get('google_client_secret', '') }}"
+                           class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 pr-10 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                           placeholder="Enter your Google Client Secret">
+                    <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white" onclick="toggleVisibility('google_client_secret', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <h2 class="text-xl font-semibold text-white mb-4">Notification Settings</h2>
+            <div class="mb-4">
+                <label for="discord_webhook" class="block text-sm font-medium text-gray-400 mb-2">Discord Webhook URL</label>
+                <div class="relative">
+                    <input type="password" id="discord_webhook" name="discord_webhook"
+                           value="{{ app_config.get('discord_webhook', '') }}"
+                           class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 pr-10 focus:outline-none focus:ring-accent focus:border-accent text-white"
+                           placeholder="Enter Discord Webhook URL">
+                    <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white" onclick="toggleVisibility('discord_webhook', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- New Email (SMTP) Settings -->
+            <div class="mt-6 pt-6 border-t border-base-300">
+                <h3 class="text-lg font-semibold text-white mb-4">Email (SMTP) Settings</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label for="smtp_sender_email" class="block text-sm font-medium text-gray-400 mb-2">Sender Email Address</label>
+                        <input type="email" id="smtp_sender_email" name="smtp_sender_email" value="{{ app_config.get('smtp_sender_email', '') }}" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., no-reply@example.com">
+                    </div>
+                    <div>
+                        <label for="smtp_server" class="block text-sm font-medium text-gray-400 mb-2">SMTP Server</label>
+                        <input type="text" id="smtp_server" name="smtp_server" value="{{ app_config.get('smtp_server', '') }}" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., smtp.gmail.com">
+                    </div>
+                    <div>
+                        <label for="smtp_port" class="block text-sm font-medium text-gray-400 mb-2">SMTP Port</label>
+                        <input type="number" id="smtp_port" name="smtp_port" value="{{ app_config.get('smtp_port', '') }}" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="e.g., 587">
+                    </div>
+                    <div>
+                        <label for="smtp_username" class="block text-sm font-medium text-gray-400 mb-2">SMTP Username</label>
+                        <input type="text" id="smtp_username" name="smtp_username" value="{{ app_config.get('smtp_username', '') }}" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="Your SMTP username">
+                    </div>
+                    <div>
+                        <label for="smtp_password" class="block text-sm font-medium text-gray-400 mb-2">SMTP Password</label>
+                        <div class="relative">
+                            <input type="password" id="smtp_password" name="smtp_password" value="{{ app_config.get('smtp_password', '') }}" class="w-full bg-base-100 border border-base-300 rounded-md shadow-sm py-2 px-3 pr-10 focus:outline-none focus:ring-accent focus:border-accent text-white" placeholder="Your SMTP password">
+                            <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white" onclick="toggleVisibility('smtp_password', this)"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2 flex items-center">
+                        <input type="checkbox" id="smtp_use_tls" name="smtp_use_tls" class="form-checkbox h-5 w-5 text-accent focus:ring-accent bg-base-100 border-base-300 rounded" {% if app_config.get('smtp_use_tls') %}checked{% endif %}>
+                        <label for="smtp_use_tls" class="ml-2 block text-sm font-medium text-gray-400">Use TLS/SSL</label>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="text-xl font-semibold text-white mb-4 mt-6">Debug Settings</h2>
+            <div class="mb-6 flex items-center">
+                <input type="checkbox" id="enable_login_debug" name="enable_login_debug"
+                       class="form-checkbox h-5 w-5 text-accent focus:ring-accent bg-base-100 border-base-300 rounded"
+                       {% if app_config.get('enable_login_debug') %}checked{% endif %}>
+                <label for="enable_login_debug" class="ml-2 block text-sm font-medium text-gray-400">
+                    Enable Login Debug (shows server URL on login page)
+                </label>
+            </div>
+
+            <div class="flex justify-end mt-6">
+                {% if current_user.can('settings', 'full') %}
+                <button type="submit"
+                        class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                    Save Settings
+                </button>
+                {% else %}
+                <p class="text-red-400">You do not have permission to save settings.</p>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    const icon = button.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
+{% endblock %}

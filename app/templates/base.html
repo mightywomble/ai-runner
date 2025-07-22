@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Fysseree AIOps</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+        // Pass config to Tailwind
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'base-100': '#0d1117', // Main background
+                        'base-200': '#161b22', // Sidebar, Cards
+                        'base-300': '#21262d', // Borders, hover
+                        'accent': '#2f81f7',   // Accent color
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles for sidebar collapse */
+        #sidebar {
+            transition: width 0.3s ease-in-out;
+        }
+        #main-content {
+            transition: all 0.3s ease-in-out;
+        }
+        #sidebar.collapsed {
+            width: 5rem; /* 80px */
+        }
+        #sidebar.collapsed .sidebar-text,
+        #sidebar.collapsed .sidebar-logo-text {
+            display: none;
+        }
+        #sidebar.collapsed .sidebar-link {
+            justify-content: center;
+        }
+        .flash-message {
+            transition: opacity 0.5s ease-out;
+        }
+    </style>
+</head>
+<body class="h-full text-gray-300">
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 flex-shrink-0 bg-base-200 border-r border-base-300 flex flex-col">
+            <div class="h-16 flex items-center justify-between px-4 border-b border-base-300">
+                <div class="flex items-center overflow-hidden">
+                    <!-- New SVG Logo -->
+                    <svg class="h-8 w-8 text-accent flex-shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 2C23.49 2 2 23.49 2 50s21.49 48 48 48 48-21.49 48-48S76.51 2 50 2zm0 8c22.091 0 40 17.909 40 40s-17.909 40-40 40S10 72.091 10 50 27.909 10 50 10z" fill="currentColor"/>
+                        <path d="M50 25c-13.807 0-25 11.193-25 25s11.193 25 25 25 25-11.193 25-25S63.807 25 50 25zm-5 5h10v5H45v-5zm15 10v10H40v-10h20zM45 60h10v5H45v-5z" fill="currentColor"/>
+                        <path d="M50 15c-19.33 0-35 15.67-35 35s15.67 35 35 35 35-15.67 35-35S69.33 15 50 15zm0 60c-13.807 0-25-11.193-25-25s11.193-25 25-25 25 11.193 25 25-11.193 25-25 25z" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 5"/>
+                    </svg>
+                    <span class="ml-2 text-lg font-semibold text-white sidebar-logo-text">Fysseree AIOps</span>
+                </div>
+                <button id="sidebar-toggle" class="p-2 rounded-md hover:bg-base-300">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+            <nav class="flex-1 px-4 py-4 space-y-2">
+                <a href="{{ url_for('main.index') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'main.index' in request.endpoint else '' }}">
+                    <i class="fas fa-home fa-fw mr-3"></i>
+                    <span class="sidebar-text">Home</span>
+                </a>
+                <a href="{{ url_for('api.docs') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'api' in request.endpoint else '' }}">
+                    <i class="fas fa-code fa-fw mr-3"></i>
+                    <span class="sidebar-text">API</span>
+                </a>
+                <a href="{{ url_for('scripts.scripts_list') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'scripts' in request.endpoint else '' }}">
+                    <i class="fas fa-scroll fa-fw mr-3"></i>
+                    <span class="sidebar-text">Scripts</span>
+                </a>
+                <a href="{{ url_for('pipelines.pipeline_canvas') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'pipelines' in request.endpoint else '' }}">
+                    <i class="fas fa-cogs fa-fw mr-3"></i>
+                    <span class="sidebar-text">Pipelines</span>
+                </a>
+                <a href="{{ url_for('scheduler.schedule_list') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'scheduler' in request.endpoint else '' }}">
+                    <i class="fas fa-clock fa-fw mr-3"></i>
+                    <span class="sidebar-text">Scheduler</span>
+                </a>
+                 <a href="{{ url_for('hosts.hosts_page') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'hosts' in request.endpoint else '' }}">
+                    <i class="fas fa-server fa-fw mr-3"></i>
+                    <span class="sidebar-text">Hosts</span>
+                </a>
+            </nav>
+            <div class="px-4 py-4 border-t border-base-300">
+                 <a href="{{ url_for('settings.settings_page') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'settings' in request.endpoint else '' }}">
+                    <i class="fas fa-cog fa-fw mr-3"></i>
+                    <span class="sidebar-text">Settings</span>
+                </a>
+                 <a href="{{ url_for('users.users_list') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'users' in request.endpoint else '' }}">
+                    <i class="fas fa-users-cog fa-fw mr-3"></i>
+                    <span class="sidebar-text">Users</span>
+                </a>
+                <a href="{{ url_for('backup.backup') }}" class="flex items-center px-4 py-2 rounded-md hover:bg-base-300 sidebar-link {{ 'bg-accent text-white' if 'backup' in request.endpoint else '' }}">
+                    <i class="fas fa-save fa-fw mr-3"></i>
+                    <span class="sidebar-text">Backup / Restore</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <div id="main-content" class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top bar -->
+            <header class="h-16 bg-base-200 border-b border-base-300 flex items-center justify-between px-6 flex-shrink-0">
+                <h1 class="text-xl font-semibold text-white">{{ title }}</h1>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <button id="test-ai-btn" class="p-2 rounded-full hover:bg-base-300" title="Test AI Provider Connection">
+                            <i id="test-ai-icon" class="fas fa-plug text-gray-400"></i>
+                        </button>
+                        <select id="ai-provider" class="bg-base-300 text-white border border-gray-600 rounded-md pl-3 pr-8 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-base-200 focus:ring-accent">
+                            <option value="gemini">Gemini</option>
+                            <option value="chatgpt">ChatGPT</option>
+                        </select>
+                    </div>
+                    {# Login/Logout and User Info Section #}
+                    {% if current_user.is_authenticated %}
+                        <div class="flex items-center space-x-2">
+                            <span class="text-gray-400 text-sm">Welcome, <strong class="text-white">{{ current_user.username }}</strong></span>
+                            <a href="{{ url_for('auth.logout') }}" class="p-2 rounded-full hover:bg-base-300" title="Logout">
+                                <i class="fas fa-sign-out-alt text-xl text-red-400"></i>
+                            </a>
+                        </div>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="p-2 rounded-full hover:bg-base-300" title="Login">
+                            <i class="fas fa-sign-in-alt text-xl text-green-400"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </header>
+            
+            <!-- Page content -->
+            <main class="flex-1 overflow-y-auto p-6">
+                 {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div id="flash-container">
+                        {% for category, message in messages %}
+                        <div class="flash-message bg-{{ 'green-600' if category == 'success' else 'red-600' }} bg-opacity-50 border border-{{ 'green-500' if category == 'success' else 'red-500' }} text-white p-4 rounded-md mb-4 flex justify-between items-center">
+                            <span>{{ message }}</span>
+                            <button class="flash-close-btn text-xl leading-none">&times;</button>
+                        </div>
+                        {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // AI Provider Test Button
+                const testAiBtn = document.getElementById('test-ai-btn');
+                if (testAiBtn) {
+                    const testAiIcon = document.getElementById('test-ai-icon');
+                    const aiProviderSelect = document.getElementById('ai-provider');
+                    testAiBtn.addEventListener('click', function() {
+                        const provider = aiProviderSelect.value;
+                        testAiIcon.className = 'fas fa-spinner fa-spin text-gray-400';
+                        fetch("{{ url_for('main.test_ai_provider') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: provider }) })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) { testAiIcon.className = 'fas fa-check-circle text-green-500'; } 
+                            else { testAiIcon.className = 'fas fa-times-circle text-red-500'; alert(`Test failed for ${provider}: ${data.error}`); }
+                        })
+                        .catch(err => { testAiIcon.className = 'fas fa-exclamation-triangle text-yellow-500'; alert('An error occurred during the test.'); console.error('AI Test Error:', err); })
+                        .finally(() => { setTimeout(() => { testAiIcon.className = 'fas fa-plug text-gray-400'; }, 5000); });
+                    });
+                }
+
+                // Sidebar Toggle Button
+                const sidebar = document.getElementById('sidebar');
+                const toggleBtn = document.getElementById('sidebar-toggle');
+                if (toggleBtn) {
+                    const toggleIcon = toggleBtn.querySelector('i');
+                    toggleBtn.addEventListener('click', () => {
+                        sidebar.classList.toggle('collapsed');
+                        if (sidebar.classList.contains('collapsed')) {
+                            toggleIcon.classList.remove('fa-chevron-left');
+                            toggleIcon.classList.add('fa-chevron-right');
+                        } else {
+                            toggleIcon.classList.remove('fa-chevron-right');
+                            toggleIcon.classList.add('fa-chevron-left');
+                        }
+                    });
+                }
+
+                // Flash Message Handling
+                const flashContainer = document.getElementById('flash-container');
+                if (flashContainer) {
+                    const messages = flashContainer.querySelectorAll('.flash-message');
+                    messages.forEach(message => {
+                        const closeBtn = message.querySelector('.flash-close-btn');
+                        closeBtn.addEventListener('click', () => {
+                            message.style.opacity = '0';
+                            setTimeout(() => message.remove(), 500);
+                        });
+                        setTimeout(() => {
+                            closeBtn.click();
+                        }, 5000); // Auto-dismiss after 5 seconds
+                    });
+                }
+
+            } catch (e) {
+                console.error("Error setting up base layout scripts:", e);
+            }
+        });
+    </script>
+</body>
+</html>

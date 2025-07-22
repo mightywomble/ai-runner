@@ -1,0 +1,14 @@
+Flask
+PyYAML
+Flask-SQLAlchemy
+Flask-Migrate
+paramiko
+google-generativeai
+openai
+requests
+PyGithub
+Flask-CORS
+Authlib
+Flask-Login
+APScheduler
+croniter

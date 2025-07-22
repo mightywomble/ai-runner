@@ -1,0 +1,151 @@
+/* Custom scrollbar for a more modern look consistent with the dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0d1117; /* base-100 */
+}
+::-webkit-scrollbar-thumb {
+  background: #21262d; /* base-300 */
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #30363d; /* A slightly lighter gray */
+}
+
+/* Pipeline editor styles */
+.btn-warning {
+    --tw-bg-opacity: 1;
+    background-color: rgb(245 158 11 / var(--tw-bg-opacity));
+}
+
+.btn-warning:hover {
+    background-color: rgb(217 119 6);
+}
+
+#pipeline-name:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Pipeline node styles */
+.pipeline-node {
+    cursor: move;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.pipeline-node:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.connector-in, .connector-out {
+    cursor: crosshair;
+}
+
+.connector-in:hover, .connector-out:hover {
+    transform: scale(1.2);
+}
+
+/* Group expansion animation */
+.group-content {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Table styling for hosts */
+.table th {
+    background-color: rgba(0, 0, 0, 0.1);
+    font-weight: 600;
+    padding: 0.75rem;
+}
+
+.table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+}
+
+/* Form input fixes */
+.input, .select, .textarea {
+    min-height: auto !important;
+    height: auto !important;
+}
+
+.input-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    height: 2.5rem;
+}
+
+.select-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    height: 2.5rem;
+}
+
+/* Button spacing and alignment */
+.btn-xs {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    min-height: 1.5rem;
+    height: 1.5rem;
+}
+
+/* Actions column width */
+.table td:last-child {
+    width: 120px;
+    white-space: nowrap;
+}
+
+/* Form container styling */
+.form-control {
+    margin-bottom: 1rem;
+}
+
+.form-control label {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+/* Distro logo styling */
+.distro-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px;
+}
+
+.distro-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 1.25rem;
+}
+
+/* Distro-specific colors */
+.distro-ubuntu { background-color: #E95420; color: white; }
+.distro-debian { background-color: #A81D33; color: white; }
+.distro-centos { background-color: #932279; color: white; }
+.distro-rhel { background-color: #EE0000; color: white; }
+.distro-fedora { background-color: #294172; color: white; }
+.distro-suse { background-color: #73BA25; color: white; }
+.distro-opensuse { background-color: #73BA25; color: white; }
+.distro-alpine { background-color: #0D597F; color: white; }
+.distro-arch { background-color: #1793D1; color: white; }
+.distro-manjaro { background-color: #35BF5C; color: white; }
+.distro-mint { background-color: #87CF3E; color: white; }
+.distro-pop_os { background-color: #48B9C7; color: white; }
+.distro-kali { background-color: #557C94; color: white; }
+.distro-rocky { background-color: #10B981; color: white; }
+.distro-almalinux { background-color: #000000; color: white; }
+.distro-amazon { background-color: #FF9900; color: white; }
+.distro-other { background-color: #6B7280; color: white; }

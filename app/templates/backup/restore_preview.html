@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-base-200 border border-base-300 rounded-lg shadow-lg">
+        <div class="p-6 border-b border-base-300">
+            <h2 class="text-2xl font-semibold text-white flex items-center">
+                <i class="fas fa-tasks mr-3 text-accent"></i>
+                Confirm Restore
+            </h2>
+            <p class="text-gray-400 mt-2">Backup file <code class="bg-base-300 text-accent px-2 py-1 rounded-md">{{ filename }}</code> has been analyzed. Select the items you wish to restore.</p>
+            <p class="text-yellow-400 mt-2 text-sm"><i class="fas fa-exclamation-triangle mr-1"></i> Restoring an item will <strong class="font-bold">overwrite all existing data</strong> for that item type.</p>
+        </div>
+
+        <form action="{{ url_for('backup.execute_restore') }}" method="post">
+            <input type="hidden" name="upload_id" value="{{ upload_id }}">
+            <input type="hidden" name="filename" value="{{ filename }}">
+            
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Items found in backup:</h3>
+                <div class="space-y-4">
+                    {% if 'hosts' in summary %}
+                    <label class="flex items-center p-4 bg-base-300 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <input type="checkbox" name="restore_items" value="hosts" class="h-5 w-5 rounded text-accent bg-gray-700 border-gray-600 focus:ring-accent">
+                        <span class="ml-4 flex-grow text-white">Hosts</span>
+                        <span class="text-sm font-mono bg-base-100 text-gray-300 px-3 py-1 rounded-full">{{ summary.hosts }} found</span>
+                    </label>
+                    {% endif %}
+
+                    {% if 'scripts' in summary %}
+                    <label class="flex items-center p-4 bg-base-300 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <input type="checkbox" name="restore_items" value="scripts" class="h-5 w-5 rounded text-accent bg-gray-700 border-gray-600 focus:ring-accent">
+                        <span class="ml-4 flex-grow text-white">Scripts</span>
+                        <span class="text-sm font-mono bg-base-100 text-gray-300 px-3 py-1 rounded-full">{{ summary.scripts }} found</span>
+                    </label>
+                    {% endif %}
+
+                    {% if 'pipelines' in summary %}
+                    <label class="flex items-center p-4 bg-base-300 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <input type="checkbox" name="restore_items" value="pipelines" class="h-5 w-5 rounded text-accent bg-gray-700 border-gray-600 focus:ring-accent">
+                        <span class="ml-4 flex-grow text-white">Pipelines</span>
+                        <span class="text-sm font-mono bg-base-100 text-gray-300 px-3 py-1 rounded-full">{{ summary.pipelines }} found</span>
+                    </label>
+                    {% endif %}
+
+                    {% if 'settings' in summary %}
+                    <label class="flex items-center p-4 bg-base-300 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <input type="checkbox" name="restore_items" value="settings" class="h-5 w-5 rounded text-accent bg-gray-700 border-gray-600 focus:ring-accent">
+                        <span class="ml-4 flex-grow text-white">Settings</span>
+                        <span class="text-sm font-mono bg-base-100 text-gray-300 px-3 py-1 rounded-full">{{ summary.settings }} found</span>
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="p-6 bg-base-100 border-t border-base-300 rounded-b-lg flex justify-end items-center space-x-4">
+                <a href="{{ url_for('backup.backup') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition">Cancel</a>
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center transition" onclick="return confirm('Are you sure? This will permanently overwrite the selected data.');">
+                    <i class="fas fa-trash-restore mr-2"></i>
+                    Execute Restore
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
