@@ -280,8 +280,12 @@
             }
 
             hideModal(hostModal);
-            runOutputContainer.classList.remove('hidden');
-            runOutputContent.innerHTML = '<div class="p-4"><i class="fas fa-spinner fa-spin mr-2"></i>Running script on hosts...</div>';
+            
+            // Show execution results in the output modal instead
+            document.getElementById('output-modal-title').textContent = `Executing: ${currentScript.name}`;
+            const content = document.getElementById('output-modal-content');
+            content.innerHTML = '<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Running script on hosts...</div>';
+            showModal(outputModal);
 
             fetch("{{ url_for('main.run_script') }}", {
                 method: 'POST',
@@ -294,7 +298,7 @@
             })
             .then(res => res.json())
             .then(data => {
-                runOutputContent.innerHTML = '';
+                content.innerHTML = '';
                 data.results.forEach(result => {
                     const resultDiv = document.createElement('div');
                     resultDiv.className = 'mb-4 p-4 rounded-md border';
@@ -323,17 +327,17 @@
                         ` : ''}
                         ${actionsHtml}
                     `;
-                    runOutputContent.appendChild(resultDiv);
+                    content.appendChild(resultDiv);
                 });
             })
             .catch(error => {
-                runOutputContent.innerHTML = '<div class="p-4 text-red-400">Error running script: ' + error.message + '</div>';
+                content.innerHTML = '<div class="p-4 text-red-400">Error running script: ' + error.message + '</div>';
                 console.error('Script execution error:', error);
             });
         });
 
-        // AI Analysis Button Click
-        runOutputContent.addEventListener('click', function(event) {
+        // AI Analysis Button Click - Use event delegation on document for modal content
+        document.addEventListener('click', function(event) {
             const analyzeBtn = event.target.closest('.analyze-output-btn');
             if (analyzeBtn && currentScript) {
                 const output = analyzeBtn.dataset.output;
