@@ -87,20 +87,31 @@ def get_github_scripts():
 @login_required
 @permission_required('scripts', 'full')
 def edit_script(script_id):
-    script_to_edit = Script.query.get_or_404(script_id)
+    # Handle creating a new script (script_id = 0)
+    if script_id == 0:
+        script_to_edit = Script(name='', content='', script_type='Bash Script', description='')
+    else:
+        script_to_edit = Script.query.get_or_404(script_id)
     if request.method == 'POST':
         script_to_edit.name = request.form['name']
         script_to_edit.content = request.form['content']
         script_to_edit.description = request.form.get('description')
         script_to_edit.script_type = request.form.get('script_type', 'Bash Script')
         try:
+            # If script_id was 0, this is a new script, so add it to the session
+            if script_id == 0:
+                db.session.add(script_to_edit)
+                flash(f'Script "{script_to_edit.name}" has been created.', 'success')
+            else:
+                flash(f'Script "{script_to_edit.name}" has been updated.', 'success')
             db.session.commit()
-            flash(f'Script "{script_to_edit.name}" has been updated.', 'success')
         except Exception as e:
             db.session.rollback()
-            flash(f'Error updating script: {e}', 'error')
+            flash(f'Error saving script: {e}', 'error')
         return redirect(url_for('scripts.scripts_list'))
-    return render_template('scripts/edit_script.html', title=f'Edit {script_to_edit.name}', script=script_to_edit, script_types=['Bash Command', 'Bash Script', 'Ansible Playbook', 'Python Script'])
+    # Set appropriate title based on whether this is a new script or existing script
+    title = 'New Script' if script_id == 0 else f'Edit {script_to_edit.name}'
+    return render_template('scripts/edit_script.html', title=title, script=script_to_edit, script_types=['Bash Command', 'Bash Script', 'Ansible Playbook', 'Python Script'])
 
 
 @bp.route('/delete/<int:script_id>', methods=['POST'])

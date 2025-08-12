@@ -35,8 +35,11 @@
                     <div class="bg-base-100 rounded-md p-4 h-64 font-mono text-sm overflow-auto border border-base-300">
                         <pre><code id="script-output" class="text-gray-300"># Your generated script will appear here...</code></pre>
                     </div>
-                    <div class="mt-4 grid grid-cols-3 gap-2">
+                    <div class="mt-4 grid grid-cols-2 gap-2">
                         <button id="dry-run-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-play mr-2"></i>Dry Run</button>
+                        <button id="save-script-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-save mr-2"></i>Save Script</button>
+                    </div>
+                    <div class="mt-2 grid grid-cols-2 gap-2">
                         <button id="run-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-rocket mr-2"></i>Run</button>
                         <button id="sudo-run-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"><i class="fas fa-user-shield mr-2"></i>Run as Sudo</button>
                     </div>
@@ -363,6 +366,39 @@ try {
                     alert('An unexpected error occurred while saving the script.');
                 });
             }
+        }
+    });
+
+    // --- SAVE SCRIPT (from homepage) ---
+    document.getElementById('save-script-btn').addEventListener('click', function() {
+        const script = document.getElementById('script-output').textContent;
+        if (script.startsWith('# Your generated script')) {
+            alert('Please generate a script first.');
+            return;
+        }
+        
+        const scriptName = prompt("Enter a name for this script:", "new-script.sh");
+        if (scriptName) {
+            const scriptType = document.getElementById('script-type').value;
+            fetch("{{ url_for('scripts.save_script') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: script, name: scriptName, script_type: scriptType }),
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    // Optionally, redirect to the scripts list page to see the newly saved script
+                    window.location.href = "{{ url_for('scripts.scripts_list') }}";
+                } else {
+                    alert('Error saving script: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Network or parsing error:', error);
+                alert('An unexpected error occurred while saving the script.');
+            });
         }
     });
 
