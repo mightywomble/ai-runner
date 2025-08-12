@@ -89,13 +89,12 @@ def get_github_scripts():
 def edit_script(script_id):
     # Handle creating a new script (script_id = 0)
     if script_id == 0:
-        script_to_edit = Script(name='', content='', script_type='Bash Script', description='')
+        script_to_edit = Script(name='', content='', script_type='Bash Script')
     else:
         script_to_edit = Script.query.get_or_404(script_id)
     if request.method == 'POST':
         script_to_edit.name = request.form['name']
         script_to_edit.content = request.form['content']
-        script_to_edit.description = request.form.get('description')
         script_to_edit.script_type = request.form.get('script_type', 'Bash Script')
         try:
             # If script_id was 0, this is a new script, so add it to the session
