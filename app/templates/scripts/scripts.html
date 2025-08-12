@@ -45,6 +45,13 @@
                         <td class="py-3 px-4 whitespace-nowrap">{{ script.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td class="py-3 px-4 whitespace-nowrap">
                             {% if current_user.can('scripts', 'full') %}
+                            <button class="text-green-500 hover:text-green-400 mr-3 run-script-btn" 
+                                    data-script-id="{{ script.id }}" 
+                                    data-script-name="{{ script.name }}" 
+                                    data-script-content="{{ script.content | e }}" 
+                                    title="Run Script">
+                                <i class="fas fa-play"></i>
+                            </button>
                             <a href="{{ url_for('scripts.edit_script', script_id=script.id) }}" class="text-accent hover:text-blue-400 mr-3" title="Edit Script">
                                 <i class="fas fa-edit"></i>
                             </a>
@@ -99,8 +106,263 @@
     </div>
 </div>
 
+<!-- Host Selection Modal -->
+<div id="host-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-md border border-base-300">
+        <div class="p-6 border-b border-base-300">
+            <h3 class="text-lg font-semibold text-white">Select Hosts to Run On</h3>
+        </div>
+        <div class="p-6 max-h-64 overflow-y-auto">
+            <div id="host-list" class="space-y-2">
+                <!-- Host checkboxes will be inserted here -->
+            </div>
+        </div>
+        <div class="p-6 bg-base-100 border-t border-base-300 flex justify-end space-x-4">
+            <button id="cancel-run-btn" class="bg-base-300 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
+            <button id="confirm-run-btn" class="bg-accent hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md">Run Script</button>
+        </div>
+    </div>
+</div>
+
+<!-- Output Modal -->
+<div id="output-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-base-200 rounded-lg shadow-xl w-full max-w-4xl border border-base-300 flex flex-col" style="max-height: 90vh;">
+        <div class="p-6 border-b border-base-300 flex justify-between items-center">
+            <h3 id="output-modal-title" class="text-lg font-semibold text-white">Execution Results</h3>
+            <button id="close-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div id="output-modal-content" class="p-6 overflow-y-auto flex-1 font-mono text-sm">
+            <!-- Output will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<!-- Live Run Output Container -->
+<div id="run-output-container" class="hidden bg-base-200 border border-base-300 shadow-lg rounded-lg mt-8">
+    <div class="p-6 border-b border-base-300 flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-white">Live Execution Output</h2>
+        <button id="clear-run-output-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+    </div>
+    <div id="run-output-content" class="p-6 font-mono text-sm">
+        <!-- Live run output will be inserted here -->
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // --- Script Execution Variables ---
+        let currentScript = null;
+        const hostModal = document.getElementById('host-modal');
+        const outputModal = document.getElementById('output-modal');
+        const runOutputContainer = document.getElementById('run-output-container');
+        const runOutputContent = document.getElementById('run-output-content');
+        const cancelRunBtn = document.getElementById('cancel-run-btn');
+        const closeOutputBtn = document.getElementById('close-output-btn');
+        const clearRunOutputBtn = document.getElementById('clear-run-output-btn');
+        const confirmRunBtn = document.getElementById('confirm-run-btn');
+
+        // --- Modal Utilities ---
+        function showModal(modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        function hideModal(modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // --- Script Execution Functions ---
+        function openHostSelectionModal(scriptContent, scriptName) {
+            currentScript = { content: scriptContent, name: scriptName };
+            
+            fetch("{{ url_for('main.get_hosts') }}")
+                .then(res => res.json())
+                .then(hosts => {
+                    const hostList = document.getElementById('host-list');
+                    hostList.innerHTML = '';
+                    if (hosts.length === 0) {
+                        hostList.innerHTML = '<p class="text-gray-400">No hosts found. Please add hosts on the Hosts page.</p>';
+                    } else {
+                        hosts.forEach(host => {
+                            hostList.innerHTML += `
+                                <label class="flex items-center space-x-3 p-2 rounded-md hover:bg-base-300 cursor-pointer">
+                                    <input type="checkbox" value="${host.id}" class="form-checkbox h-5 w-5 bg-base-100 border-base-300 text-accent focus:ring-accent">
+                                    <span>${host.name}</span>
+                                </label>
+                            `;
+                        });
+                    }
+                    showModal(hostModal);
+                });
+        }
+
+        function renderCollapsibleOutput(text) {
+            const contentArea = document.createElement('div');
+            const sections = text.split(/\n\s*HEADING:\s*/);
+
+            const intro = document.createElement('div');
+            intro.className = 'whitespace-pre-wrap mb-4';
+            intro.textContent = sections[0].trim();
+            contentArea.appendChild(intro);
+
+            sections.slice(1).forEach((section, index) => {
+                const lines = section.split('\n');
+                const title = lines[0].trim();
+                let content = lines.slice(1).join('\n');
+                
+                content = content.replace(/```([\s\S]*?)```/g, (match, code) => {
+                    return `<pre class="bg-base-100 p-3 rounded-md my-2 text-gray-300"><code>${code.trim()}</code></pre>`;
+                });
+
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'border-t border-base-300 pt-4 mt-4';
+
+                const button = document.createElement('button');
+                button.className = 'w-full text-left flex justify-between items-center text-white font-semibold';
+                button.innerHTML = `<span>${title}</span><i class="fas fa-chevron-down transform transition-transform"></i>`;
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'mt-2 text-gray-400 whitespace-pre-wrap';
+                contentDiv.innerHTML = content;
+                
+                if (index > 0) {
+                    contentDiv.classList.add('hidden');
+                } else {
+                    button.querySelector('i').classList.add('rotate-180');
+                }
+
+                button.addEventListener('click', () => {
+                    contentDiv.classList.toggle('hidden');
+                    button.querySelector('i').classList.toggle('rotate-180');
+                });
+
+                sectionDiv.appendChild(button);
+                sectionDiv.appendChild(contentDiv);
+                contentArea.appendChild(sectionDiv);
+            });
+            return contentArea;
+        }
+
+        // --- Event Listeners ---
+        
+        // Run Script Button Click
+        document.addEventListener('click', function(event) {
+            const runBtn = event.target.closest('.run-script-btn');
+            if (runBtn) {
+                const scriptContent = runBtn.dataset.scriptContent;
+                const scriptName = runBtn.dataset.scriptName;
+                openHostSelectionModal(scriptContent, scriptName);
+            }
+        });
+
+        // Modal Event Listeners
+        cancelRunBtn.addEventListener('click', () => hideModal(hostModal));
+        closeOutputBtn.addEventListener('click', () => hideModal(outputModal));
+        clearRunOutputBtn.addEventListener('click', () => {
+            runOutputContent.innerHTML = '';
+            runOutputContainer.classList.add('hidden');
+        });
+
+        // Confirm Run Button
+        confirmRunBtn.addEventListener('click', () => {
+            const selectedHosts = Array.from(document.querySelectorAll('#host-list input:checked')).map(cb => cb.value);
+            if (selectedHosts.length === 0) {
+                alert('Please select at least one host.');
+                return;
+            }
+            
+            if (!currentScript) {
+                alert('No script selected.');
+                return;
+            }
+
+            hideModal(hostModal);
+            runOutputContainer.classList.remove('hidden');
+            runOutputContent.innerHTML = '<div class="p-4"><i class="fas fa-spinner fa-spin mr-2"></i>Running script on hosts...</div>';
+
+            fetch("{{ url_for('main.run_script') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    script: currentScript.content, 
+                    host_ids: selectedHosts,
+                    use_sudo: false // For now, no sudo option from scripts page
+                }),
+            })
+            .then(res => res.json())
+            .then(data => {
+                runOutputContent.innerHTML = '';
+                data.results.forEach(result => {
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'mb-4 p-4 rounded-md border';
+                    const statusClass = result.success ? 'border-green-500 bg-green-900 bg-opacity-20' : 'border-red-500 bg-red-900 bg-opacity-20';
+                    resultDiv.classList.add(...statusClass.split(' '));
+                    
+                    const actionsHtml = `
+                        <div class="mt-4 pt-4 border-t border-base-300 flex items-center space-x-2">
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md text-sm analyze-output-btn" data-output="${result.output}" data-error="${result.error}">
+                                <i class="fas fa-search-plus mr-2"></i>AI Analysis
+                            </button>
+                        </div>
+                    `;
+
+                    resultDiv.innerHTML = `
+                        <h4 class="font-bold text-white">${result.host_name}</h4>
+                        <div class="mt-2">
+                            <strong class="text-gray-400">Output:</strong>
+                            <pre class="whitespace-pre-wrap text-gray-300">${result.output || '(No output)'}</pre>
+                        </div>
+                        ${result.error ? `
+                        <div class="mt-2">
+                            <strong class="text-red-400">Error:</strong>
+                            <pre class="whitespace-pre-wrap text-red-400">${result.error}</pre>
+                        </div>
+                        ` : ''}
+                        ${actionsHtml}
+                    `;
+                    runOutputContent.appendChild(resultDiv);
+                });
+            })
+            .catch(error => {
+                runOutputContent.innerHTML = '<div class="p-4 text-red-400">Error running script: ' + error.message + '</div>';
+                console.error('Script execution error:', error);
+            });
+        });
+
+        // AI Analysis Button Click
+        runOutputContent.addEventListener('click', function(event) {
+            const analyzeBtn = event.target.closest('.analyze-output-btn');
+            if (analyzeBtn && currentScript) {
+                const output = analyzeBtn.dataset.output;
+                const error = analyzeBtn.dataset.error;
+                const aiProviderElement = document.getElementById('ai-provider');
+                const ai_provider = aiProviderElement ? aiProviderElement.value : 'gemini';
+
+                document.getElementById('output-modal-title').textContent = 'Execution Analysis';
+                const content = document.getElementById('output-modal-content');
+                content.innerHTML = '<div class="p-4 text-center"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing output...</div>';
+                showModal(outputModal);
+
+                fetch("{{ url_for('main.analyze_output') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ script: currentScript.content, output, error, ai_provider }),
+                })
+                .then(res => res.json())
+                .then(data => {
+                    content.innerHTML = '';
+                    if (data.error) {
+                        content.innerHTML = `<pre class="whitespace-pre-wrap">${data.error}</pre>`;
+                    } else {
+                        content.appendChild(renderCollapsibleOutput(data.output));
+                    }
+                })
+                .catch(error => {
+                    content.innerHTML = '<div class="p-4 text-red-400">Error analyzing output: ' + error.message + '</div>';
+                    console.error('Analysis error:', error);
+                });
+            }
+        });
         const githubScriptsLoading = document.getElementById('github-scripts-loading');
         const githubScriptsContent = document.getElementById('github-scripts-content');
         const githubScriptsTableBody = document.getElementById('github-scripts-table-body');
